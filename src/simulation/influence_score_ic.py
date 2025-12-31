@@ -1,15 +1,17 @@
 import random
+import os
 from tqdm import tqdm
 from network_diffusion import mln
 from network_diffusion.simulator import Simulator
 
-from src.diffusion_models.multilayer_ic import MultiLayerICModel
+from src.models.diffusion_multilayer_ic import MultiLayerICModel
+from src.utils import save_influence_to_csv, save_influence_to_json
 from src.utils_graph import precompute_neighbor_probs
 
 """
 Computes influence of each node as if it's the ONLY seed.
 """
-def compute_influence_scores(nodes, layer_graphs, layer_probs, num_steps=5, n_sim=200, seed=42):
+def compute_influence_scores(layer_graphs, layer_probs, num_steps=5, n_sim=200, seed=42, out_dir=None):
     if seed is not None:
         random.seed(seed)
 
@@ -18,12 +20,13 @@ def compute_influence_scores(nodes, layer_graphs, layer_probs, num_steps=5, n_si
     neighbor_probs, nodes_in_layer = precompute_neighbor_probs(layer_graphs, layer_probs)
 
     # Collect all nodes across all layers
-    if nodes is None:
-        nodes = set()
-        for lnodes in nodes_in_layer.values():
-            nodes |= set(lnodes)
+
+    nodes = set()
+    for lnodes in nodes_in_layer.values():
+        nodes |= set(lnodes)
 
     influence = {}
+    influence_checkpoint = {}
 
     # Outer loop: iterate over nodes as single seed
     for node in tqdm(sorted(nodes), desc="Nodes processed"):
@@ -48,6 +51,12 @@ def compute_influence_scores(nodes, layer_graphs, layer_probs, num_steps=5, n_si
             total_spread += len(model.active)
 
         influence[node] = round(total_spread / n_sim, 2)
+        influence_checkpoint[node] = round(total_spread / n_sim, 2)
         print(f"\n Node {node}: {influence[node]}")
+
+        if node%50==0:
+            save_influence_to_csv(influence_checkpoint, os.path.join(out_dir, f"influence_scores_{num_steps}steps.csv"))
+            save_influence_to_json(influence_checkpoint, os.path.join(out_dir, f"influence_scores_{num_steps}steps.json"))
+            influence_checkpoint = {}
 
     return influence
