@@ -1,5 +1,6 @@
 import random
 import os
+import json
 from tqdm import tqdm
 from network_diffusion import mln
 from network_diffusion.simulator import Simulator
@@ -24,12 +25,25 @@ def compute_influence_scores(layer_graphs, layer_probs, num_steps=5, n_sim=200, 
     nodes = set()
     for lnodes in nodes_in_layer.values():
         nodes |= set(lnodes)
+    nodes = sorted(nodes)
 
-    influence = {}
+    out_file = os.path.join(out_dir, f"influence_scores_{num_steps}steps.json")
+
+    if os.path.exists(out_file):
+        with open(out_file, "r") as f:
+            influence = {int(k): v for k, v in json.load(f).items()}
+        print(f"Resuming from checkpoint. {len(influence)} nodes already processed.")
+    else:
+        influence = {}
+
     influence_checkpoint = {}
 
     # Outer loop: iterate over nodes as single seed
-    for node in tqdm(sorted(nodes), desc="Nodes processed"):
+    for node in tqdm(nodes, desc="Nodes processed"):
+
+        if node in influence:
+            continue  # already processed
+
         total_spread = 0
 
         # Create one model for this seed (fast), reuse simulator across n_sim runs
@@ -50,13 +64,17 @@ def compute_influence_scores(layer_graphs, layer_probs, num_steps=5, n_sim=200, 
             # count global infected nodes
             total_spread += len(model.active)
 
-        influence[node] = round(total_spread / n_sim, 2)
-        influence_checkpoint[node] = round(total_spread / n_sim, 2)
-        print(f"\n Node {node}: {influence[node]}")
+        score = round(total_spread / n_sim, 2)
+        influence[node] = score
+        influence_checkpoint[node] = score
+        print(f"\n Node {node}: {score}")
 
         if node%50==0:
             save_influence_to_csv(influence_checkpoint, os.path.join(out_dir, f"influence_scores_{num_steps}steps.csv"))
             save_influence_to_json(influence_checkpoint, os.path.join(out_dir, f"influence_scores_{num_steps}steps.json"))
             influence_checkpoint = {}
+
+    save_influence_to_csv(influence, os.path.join(out_dir, f"influence_scores_{num_steps}steps.csv"))
+    save_influence_to_json(influence, os.path.join(out_dir, f"influence_scores_{num_steps}steps.json"))
 
     return influence

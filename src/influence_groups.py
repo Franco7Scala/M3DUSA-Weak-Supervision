@@ -101,20 +101,13 @@ def rank_normalize(scores: dict):
 
 
 
-
-
-
-def compute_influence_groups(json_path):
+def compute_and_plot_influence_groups(json_path, low_threshold, high_threshold):
 
     with open(json_path, "r") as f:
         data = json.load(f)
 
     node_ids = list(data.keys())
     scores = np.array(list(data.values()))
-
-    # Calcola le soglie (terzili)
-    low_threshold = np.percentile(scores, 33)
-    high_threshold = np.percentile(scores, 66)
 
     groups = {
         "low_influence_nodes": [],
@@ -164,13 +157,45 @@ def compute_influence_groups(json_path):
 
     plt.show()
 
-    return groups, low_threshold, high_threshold
+
+def compare_scores_and_return_groups(ic_scores, proxy_scores, output_dir):
+
+    # convert keys
+    ic_scores = {int(k): float(v) for k, v in ic_scores.items()}
+    proxy_scores = {int(k): float(v) for k, v in proxy_scores.items()}
+
+    output_file = os.path.join(output_dir, "comparison_ic_vs_proxy.txt")
+
+    with open(output_file, "w") as f:
+
+        # 1) ranking comparison
+        rho, tau = ranking_comparison(ic_scores, proxy_scores)
+        f.write(f"Spearman rho: {rho}\n")
+        f.write(f"Kendall tau: {tau}\n\n")
+
+        # normalization
+        ic_scores_norm = rank_normalize(ic_scores)
+        proxy_scores_norm = rank_normalize(proxy_scores)
+
+        # 2) group comparison
+        low_thr, high_thr = ic_percentile_thresholds(ic_scores_norm, 50, 85)
+        groups_ic = compute_influence_groups_from_dict(ic_scores_norm, low_thr, high_thr)
+        groups_proxy = compute_influence_groups_from_dict(proxy_scores_norm, low_thr, high_thr)
+
+        disagreement = group_disagreement_percentage(groups_ic, groups_proxy)
+        f.write(f"Disagreement %: {disagreement}\n\n")
+
+        f.write("Jaccard similarity:\n")
+        jaccard = group_jaccard_similarity(groups_ic, groups_proxy)
+        f.write(f"{jaccard}\n")
+
+        return groups_ic, groups_proxy
+
 
 
 if __name__ == '__main__':
     dataset_name = "imdb"
     out_dir = os.path.join(get_base_dir(), dataset_name, "influential_nodes", "results")
-    #compute_influence_groups(os.path.join(out_dir, "influence_scores_3steps.json"))
 
     with open(os.path.join(out_dir, "influence_scores_3steps.json")) as f:
         ic_scores = json.load(f)
@@ -178,29 +203,9 @@ if __name__ == '__main__':
     with open(os.path.join(out_dir, "influence_scores_IC_proxy.json")) as f:
         proxy_scores = json.load(f)
 
-    # convert keys
-    ic_scores = {int(k): float(v) for k, v in ic_scores.items()}
-    proxy_scores = {int(k): float(v) for k, v in proxy_scores.items()}
+    compare_scores_and_return_groups(ic_scores, proxy_scores, out_dir)
 
-    # 1) ranking comparison
-    rho, tau = ranking_comparison(ic_scores, proxy_scores)
-    print("Spearman rho:", rho)
-    print("Kendall tau:", tau)
 
-    # normalization
-    ic_scores_norm = rank_normalize(ic_scores)
-    proxy_scores_norm = rank_normalize(proxy_scores)
-
-    # 2) group comparison
-    low_thr, high_thr = ic_percentile_thresholds(ic_scores_norm, 50, 85)
-    groups_ic = compute_influence_groups_from_dict(ic_scores_norm, low_thr, high_thr)
-    groups_proxy = compute_influence_groups_from_dict(proxy_scores_norm, low_thr, high_thr)
-
-    print("Disagreement %:",
-          group_disagreement_percentage(groups_ic, groups_proxy))
-
-    print("Jaccard similarity:")
-    print(group_jaccard_similarity(groups_ic, groups_proxy))
 
 
 
