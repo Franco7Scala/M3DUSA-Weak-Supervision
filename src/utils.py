@@ -17,7 +17,9 @@ def get_device():
 
 
 def get_base_dir():
-    return '/home/martirano/data'
+    return '~/projects/InfluentialNodes/dataset/'
+    #return "/home/scala/projects/InfluentialNodes/dataset/"
+    #return '/home/martirano/data'
 
 def get_time_in_millis():
     return int(round(time.time() * 1000))
