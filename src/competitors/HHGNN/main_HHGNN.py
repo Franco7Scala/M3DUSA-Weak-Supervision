@@ -9,21 +9,21 @@ from src.dataset_loader import load_dataset
 from src.simulation.influence_score_ic import compute_influence_scores
 from src.utils import get_device, save_influence_to_json, get_base_dir
 from src.utils_graph import build_metapath_graphs, compute_layer_probabilities
-
+from src.HHGNN.hhgnn_model import heterodata_to_global_adj
 
 if __name__ == "__main__":
     # --- Configurazione ---
     dataset_name = "imdb"  # 'imdb', 'dblp', etc.
     beta = 0.55
     num_steps = 3
-    n_sim = 10  # Ridotto per test veloce, aumentalo a 200+ per risultati reali
+    n_sim = 1  # Ridotto per test veloce, aumentalo a 200+ per risultati reali
     reduction_factor = 4  # Usa un fattore più alto se il grafo è grande per evitare OOM con HHGNN denso
     num_hops = 2
 
     # Parametri HHGNN
-    hhgnn_K = 3  # Ordine dei path (K-hop)
+    hhgnn_K = 2  # Ordine dei path (K-hop)
     hidden_dim = 64
-    epochs = 100
+    epochs = 1
     lr = 0.005
 
     results_dir = os.path.join(get_base_dir(), dataset_name, "hhgnn_results")

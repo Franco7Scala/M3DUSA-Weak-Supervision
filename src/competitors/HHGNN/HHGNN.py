@@ -7,6 +7,69 @@ import numpy as np
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
+def heterodata_to_global_adj(data, target_type):
+    """
+    Converte un oggetto HeteroData (PyG) in una matrice di adiacenza globale densa
+    e restituisce gli indici globali dei nodi target.
+    Necessario per calcolare le potenze della matrice A^K in HHGNN.
+    """
+    node_types = data.metadata()[0]
+    edge_types = data.metadata()[1]
+
+    # 1. Calcola gli offset per mappare ogni tipo di nodo a indici globali unici (0...N)
+    node_offsets = {}
+    current_offset = 0
+    total_nodes = 0
+
+    # Ordine deterministico basato sui metadati
+    for nt in node_types:
+        num = data[nt].num_nodes
+        node_offsets[nt] = current_offset
+        current_offset += num
+        total_nodes += num
+
+    # 2. Costruisci le liste di adiacenza globali
+    row_list, col_list = [], []
+
+    for src_type, rel, dst_type in edge_types:
+        # Prendi gli archi per questo tipo di relazione
+        edge_index = data[(src_type, rel, dst_type)].edge_index
+
+        # Aggiungi gli offset per trasformare indici locali in globali
+        src_global_idx = edge_index[0] + node_offsets[src_type]
+        dst_global_idx = edge_index[1] + node_offsets[dst_type]
+
+        row_list.append(src_global_idx)
+        col_list.append(dst_global_idx)
+
+        # Rendiamo la matrice simmetrica (grafo non orientato) se src != dst
+        # Questo è importante per la stabilità spettrale citata nel paper
+        if src_type != dst_type:
+            row_list.append(dst_global_idx)
+            col_list.append(src_global_idx)
+
+    # Concatena tutti gli archi
+    if len(row_list) > 0:
+        all_rows = torch.cat(row_list)
+        all_cols = torch.cat(col_list)
+    else:
+        all_rows = torch.tensor([], dtype=torch.long)
+        all_cols = torch.tensor([], dtype=torch.long)
+
+    # 3. Crea la matrice densa
+    # Nota: Se il grafo è enorme (>20k nodi), questa operazione potrebbe usare molta RAM.
+    # In quel caso bisognerebbe usare sparse_coo_tensor, ma HHGNN richiede mm() denso per A^K.
+    adj = torch.zeros((total_nodes, total_nodes))
+    adj[all_rows, all_cols] = 1.0
+
+    # 4. Recupera gli indici globali dei nodi target (es. 'user' o 'author')
+    target_start = node_offsets[target_type]
+    target_count = data[target_type].num_nodes
+    target_global_indices = torch.arange(target_start, target_start + target_count)
+
+    return adj, target_global_indices
+
+
 # =============================================================================
 # 1. KAN Linear Layer (Basato su B-Spline)
 # Riferimento: Sezione 4.3, Eq. 12
