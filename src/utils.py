@@ -5,8 +5,8 @@ import json
 import time
 import numpy
 import copy
-from sklearn.preprocessing import label_binarize
-from sklearn.metrics import roc_auc_score
+#from sklearn.preprocessing import label_binarize
+#from sklearn.metrics import roc_auc_score
 
 from torch_geometric.data import HeteroData
 import torch_geometric.transforms as T
@@ -47,11 +47,12 @@ def get_metapaths(dataset_name):
                      [('author', 'to', 'paper'),
                       ('paper', 'to', 'conference'),
                       ('conference', 'to', 'paper'),
-                      ('paper', 'to', 'author')], #APCPA
+                      ('paper', 'to', 'author')]] #APCPA
+        """
                      [('author', 'to', 'paper'),
                       ('paper', 'to', 'term'),
                       ('term', 'to', 'paper'),
-                      ('paper', 'to', 'author')]] #APTPA
+                      ('paper', 'to', 'author')] """ #APTPA
 
     elif dataset_name.lower() == "politifact":
         metapaths = [[('user', 'posted', 'tweet'),
@@ -175,12 +176,12 @@ def save_influence_to_json(influence_dict, filename):
     with open(filename, "w") as f:
         json.dump(existing_data, f, indent=4)
 
-
+"""
 def compute_auc(y_true, y_pred):
     all_classes = numpy.arange(y_pred.shape[1])
     scores = roc_auc_score(y_true=label_binarize(y_true, classes=all_classes), y_score=y_pred, average=None, multi_class="ovo")
     valid_scores = scores[~numpy.isnan(scores)]
-    return numpy.mean(valid_scores)
+    return numpy.mean(valid_scores)"""
 
 def merge_masks(masks):
     if len(masks) == 0:

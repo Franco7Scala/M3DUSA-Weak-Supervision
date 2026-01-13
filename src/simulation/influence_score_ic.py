@@ -33,6 +33,10 @@ def compute_influence_scores(layer_graphs, layer_probs, num_steps=5, n_sim=200, 
         with open(out_file, "r") as f:
             influence = {int(k): v for k, v in json.load(f).items()}
         print(f"Resuming from checkpoint. {len(influence)} nodes already processed.")
+        # EARLY EXIT if all nodes are already processed
+        if set(influence.keys()) == set(nodes):
+            print("All nodes already processed. Returning cached influence scores.")
+            return influence
     else:
         influence = {}
 

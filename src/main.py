@@ -10,7 +10,7 @@ from src.utils_graph import build_metapath_graphs, compute_layer_probabilities
 
 def main():
 
-    dataset_name = "imdb"
+    dataset_name = "dblp"
     beta = 0.55 #0.55 for academic networks, 0.85 for social networks
     num_steps = 3 # number of diffusion epochs (5-20)
     n_sim = 3 # number of independent Monte-Carlo simulations per seed.  200+ for research-quality results, 20–50 for quick experiments
