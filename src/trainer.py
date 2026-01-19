@@ -6,7 +6,7 @@ from tqdm import tqdm
 from src.utils import compute_auc
 
 
-def train(model, data, optimizer, criterion, scheduler, n_epochs=200):
+def train(model, data, optimizer, criterion, scheduler=None, n_epochs=200):
     progress_bar = tqdm(range(n_epochs))
     for epoch in progress_bar:
         model.train()

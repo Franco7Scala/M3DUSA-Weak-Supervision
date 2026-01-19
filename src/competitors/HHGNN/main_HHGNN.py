@@ -5,11 +5,11 @@ import torch.nn.functional as F
 import numpy as np
 
 from torch_geometric.utils import to_dense_adj, dense_to_sparse
+from src.competitors.HHGNN.HHGNN import heterodata_to_global_adj, get_mo_cam, HHGNN
 from src.dataset_loader import load_dataset
 from src.simulation.influence_score_ic import compute_influence_scores
 from src.utils import get_device, save_influence_to_json, get_base_dir
 from src.utils_graph import build_metapath_graphs, compute_layer_probabilities
-from src.HHGNN.hhgnn_model import heterodata_to_global_adj
 
 if __name__ == "__main__":
     # --- Configurazione ---
@@ -72,6 +72,7 @@ if __name__ == "__main__":
     global_adj, target_global_indices = heterodata_to_global_adj(data.cpu(), target_type)
 
     # Sposta su device e calcola MO-CAM
+    #TODO manca il metodo get_mo_cam
     mo_cam_layers = get_mo_cam(global_adj, target_global_indices, K=hhgnn_K, device=device)
 
     # Feature Input

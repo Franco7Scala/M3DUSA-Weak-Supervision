@@ -3,8 +3,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
+from torch_geometric.utils import dense_to_sparse
+
+
 # Impostiamo il device (GPU se disponibile, altrimenti CPU)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+import torch
 
 
 def heterodata_to_global_adj(data, target_type):
@@ -142,45 +147,158 @@ class KANLinear(nn.Module):
 # Riferimento: Sezione 4.2, Algoritmo 1, Eq. 1-5
 # =============================================================================
 
-def get_mo_cam(adj_matrix, target_indices, K, r_threshold=0.01):
-    """
-    Costruisce la Multi-Order Contextual Adjacency Matrix.
-    Simula l'estrazione dei sottografi omogenei dal grafo eterogeneo.
-    """
-    # Assicuriamoci che adj sia su device
-    adj_matrix = adj_matrix.to(device)
-    num_nodes = adj_matrix.shape[0]
-
-    # --- Normalizzazione Globale (Laplacian) Eq. 3, 4 ---
-    # L_sys = D^(-1/2) * A * D^(-1/2)
-    deg = adj_matrix.sum(dim=1)
+def get_mo_cam(global_adj, target_indices, K, r_threshold=0.01, device='cpu'):
+    # ... (codice iniziale di normalizzazione uguale a prima) ...
+    global_adj = global_adj.to(device)
+    deg = global_adj.sum(dim=1)
     deg_inv_sqrt = deg.pow(-0.5)
     deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
     D_inv_sqrt = torch.diag(deg_inv_sqrt)
-
-    L_sys = torch.mm(torch.mm(D_inv_sqrt, adj_matrix), D_inv_sqrt)
+    L_sys = torch.mm(torch.mm(D_inv_sqrt, global_adj), D_inv_sqrt)
 
     mo_cam_layers = []
     current_adj = L_sys.clone()
 
-    print(f"Generazione MO-CAM per K={K} ordini...")
-
     for k in range(1, K + 1):
-        # Potenza della matrice per catturare hop k-esimi
         if k > 1:
             current_adj = torch.mm(current_adj, L_sys)
 
-        # --- Estrazione Sottografo Omogeneo Eq. 1 ---
-        # Selezioniamo solo le interazioni tra nodi target
-        # Slicing: righe target, colonne target
         sub_adj = current_adj[target_indices][:, target_indices]
 
-        # --- Normalizzazione Locale (Min-Max) Eq. 5 ---
+        # Normalizzazione locale
         min_val = sub_adj.min()
         max_val = sub_adj.max()
         if max_val - min_val > 1e-9:
             sub_adj = (sub_adj - min_val) / (max_val - min_val)
 
-        # --- Sparsification Eq. 2 ---
-        # Rimuoviamo rumore (valori bassi)
-        sub_adj = torch.where(sub_adj < r_threshold, torch.tensor(0.0).to(device), sub_adj
+        # Sparsification
+        sub_adj = torch.where(sub_adj < r_threshold, torch.tensor(0.0).to(device), sub_adj)
+
+        # --- PARTE CRITICA MODIFICATA ---
+        # Creiamo manualmente gli indici invece di usare dense_to_sparse
+        indices = sub_adj.nonzero(as_tuple=False).t()
+        values = sub_adj[indices[0], indices[1]]
+
+        # Restituiamo 3 valori: indici, pesi, e numero di nodi (shape)
+        num_nodes_in_layer = sub_adj.shape[0]
+        mo_cam_layers.append((indices, values, num_nodes_in_layer))
+        # --------------------------------
+
+    return mo_cam_layers
+
+
+class HHGNN(nn.Module):
+    def __init__(self, in_dim, hidden_dim, K, T_scale=1.0):
+        """
+        Args:
+            in_dim: Dimensione feature input
+            hidden_dim: Dimensione embedding nascosto
+            K: Numero massimo di ordini (lunghezza path contestuale)
+            T_scale: Fattore di temperatura per l'attenzione (Eq. 7) [cite: 286]
+        """
+        super(HHGNN, self).__init__()
+        self.K = K
+        self.hidden_dim = hidden_dim
+        self.T = T_scale
+
+        # Encoder iniziale delle feature [cite: 290]
+        self.feat_encoder = nn.Linear(in_dim, hidden_dim)
+
+        # Lista di Layer KAN, uno per ogni ordine k [cite: 284]
+        # "We maintain a learnable weight matrix for each order"
+        self.kan_layers = nn.ModuleList([
+            KANLinear(hidden_dim, hidden_dim) for _ in range(K)
+        ])
+
+        # Matrici per l'Attenzione (Query, Key, Value) [cite: 301]
+        self.W_q = nn.Linear(hidden_dim, hidden_dim)
+        self.W_k = nn.Linear(hidden_dim, hidden_dim)
+        self.W_v = nn.Linear(hidden_dim, hidden_dim)
+
+        # Normalizzazione e Attivazione per f(Message) (Eq. 9) [cite: 304, 310]
+        self.layer_norm = nn.LayerNorm(hidden_dim)
+        self.activation = nn.LeakyReLU()
+
+        # Layer finale per il ranking (proiezione a scalare)
+        # Necessario per ottenere il "Final rank" mostrato in Fig 1 [cite: 181]
+        self.score_predictor = nn.Linear(hidden_dim, 1)
+
+    def forward(self, x, mo_cam_layers):
+        """
+        Args:
+            x: Tensor [Num_Nodes, In_Dim]
+            mo_cam_layers: Lista di (indices, values, num_nodes) restituita da get_mo_cam
+        """
+        # 1. Encoding Iniziale
+        h = self.feat_encoder(x)
+        num_nodes = h.size(0)
+
+        # Liste per accumulare i vettori Key e Value per ogni ordine k
+        keys_list = []
+        values_list = []
+
+        # Query vector: dipende dal nodo target corrente (Eq. 8) [cite: 295]
+        query = self.W_q(h)
+
+        # 2. Cross-Order Message Passing [cite: 318-321]
+        for k in range(self.K):
+            # Estrai dati sparsi per l'ordine k
+            edge_index, edge_weight, _ = mo_cam_layers[k]
+
+            # --- Propagazione (Eq. 11: propagate) ---
+            if edge_index.size(1) > 0:
+                # Costruisci tensore sparso per moltiplicazione efficiente
+                adj_sparse = torch.sparse_coo_tensor(
+                    edge_index, edge_weight, (num_nodes, num_nodes)
+                ).to(x.device)
+
+                # Aggregazione delle feature dei vicini (weighted sum)
+                propagated = torch.sparse.mm(adj_sparse, h)
+            else:
+                propagated = torch.zeros_like(h)
+
+            # --- Trasformazione KAN (Eq. 11 e 12) ---
+            # Message(h_s) = Linear(propagate) + Linear(self)
+            # Applicazione del layer KAN specifico per l'ordine k
+            msg = self.kan_layers[k](propagated) + self.kan_layers[k](h)
+
+            # --- Attivazione e Normalizzazione (Eq. 9) ---
+            # f(x) = g(g(x)) con LayerNorm e LeakyReLU
+            msg_transformed = self.activation(self.layer_norm(msg))
+
+            # --- Calcolo Key e Value (Eq. 8 e 295) ---
+            k_vect = self.W_k(msg_transformed)
+            v_vect = self.W_v(msg_transformed)
+
+            keys_list.append(k_vect.unsqueeze(0))  # [1, N, Hidden]
+            values_list.append(v_vect.unsqueeze(0))  # [1, N, Hidden]
+
+        # Concatenazione lungo la dimensione degli ordini (dim 0)
+        K_stack = torch.cat(keys_list, dim=0)  # [K, N, Hidden]
+        V_stack = torch.cat(values_list, dim=0)  # [K, N, Hidden]
+
+        # 3. Edge-level (Order-level) Attention Mechanism [cite: 294]
+        # Attention(t) = Softmax( (Query * Key) / T )
+
+        # Espandiamo la query per confrontarla con ogni ordine K
+        query_expanded = query.unsqueeze(0).expand(self.K, -1, -1)  # [K, N, Hidden]
+
+        # Dot product
+        attn_logits = torch.sum(query_expanded * K_stack, dim=-1)  # [K, N]
+
+        # Scaling con temperatura T [cite: 286, 299]
+        attn_logits = attn_logits / self.T
+
+        # Softmax lungo la dimensione degli ordini (dim 0)
+        # Determina quanto ogni ordine k è importante per il nodo i
+        attn_weights = F.softmax(attn_logits, dim=0).unsqueeze(-1)  # [K, N, 1]
+
+        # 4. Aggregazione Finale (Eq. 10) [cite: 315]
+        # Weighted sum dei Values
+        weighted_values = attn_weights * V_stack  # [K, N, Hidden]
+        final_embedding = torch.sum(weighted_values, dim=0)  # [N, Hidden]
+
+        # 5. Predizione Score (Ranking)
+        scores = self.score_predictor(final_embedding)  # [N, 1]
+
+        return scores

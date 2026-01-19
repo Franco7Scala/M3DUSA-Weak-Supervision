@@ -8,12 +8,7 @@ import torch_geometric.transforms as T
 from torch_geometric.transforms import AddMetaPaths
 from src.utils import get_base_dir, build_heterodata
 from src.utils import get_metapaths
-
-import warnings
-
 from src.utils_graph import k_hop_subgraph
-
-warnings.filterwarnings("ignore")
 
 
 def load_dataset(dataset_name, reduction_factor, k, device):

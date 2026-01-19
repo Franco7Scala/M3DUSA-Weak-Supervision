@@ -17,7 +17,7 @@ def get_device():
 
 
 def get_base_dir():
-    return '~/projects/InfluentialNodes/dataset/'
+    return '/home/jovyan/projects/InfluentialNodes/dataset/'
     #return "/home/scala/projects/InfluentialNodes/dataset/"
     #return '/home/martirano/data'
 
@@ -198,3 +198,32 @@ def merge_masks(masks):
             merged_mask[key] = torch.cat((merged_mask[key], mask[key]), dim=0)
 
     return merged_mask
+
+
+def to_categorical(scores, influence_levels):
+    group_size = (len(scores) // influence_levels) + 1
+    sorted_scores = sorted(list(scores.items()), key=lambda x: x[1])
+    sorted_indexes = [couple[0] for couple in sorted_scores]
+
+    groups = []
+    for i in range(0, len(sorted_indexes), group_size):
+        groups.append(sorted_indexes[i: i + group_size])
+
+    result = {}
+    for idx, group in enumerate(groups):
+        for node_idx in group:
+            result[node_idx] = torch.eye(influence_levels)[idx]
+
+    return result
+
+
+def build_combined_output(categorical_ic_scores, ic_scores, proxy_scores, device):
+    return (torch.cat([categorical_ic_scores[idx_node].unsqueeze(0) for idx_node in ic_scores.keys()]).to(device),
+            torch.tensor([ic_scores[idx_node] for idx_node in ic_scores.keys()]).to(device).reshape(-1, 1),
+            torch.tensor([proxy_scores[idx_node] for idx_node in proxy_scores.keys()]).to(device).reshape(-1, 1))
+
+
+def fixed_randperm(n, k):
+    fixed = torch.arange(k)
+    suffix = torch.randperm(n - k) + k
+    return torch.cat([fixed, suffix])
