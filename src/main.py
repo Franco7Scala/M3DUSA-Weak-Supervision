@@ -83,20 +83,12 @@ if __name__ == "__main__":
 
     # defining mask for labeled and unlabeled nodes in the training set
     train_size = len(torch.nonzero(train_mask).flatten())
-
     train_mask_labeled = torch.zeros(train_size, dtype=torch.int)
     indices = seed_mask[:n_samples_labeled_set]
     limit = train_mask_labeled.shape[0]
     valid_indices = indices[indices < limit]
     train_mask_labeled[valid_indices] = 1
     train_mask_labeled = train_mask_labeled.unsqueeze(1).to(device)
-
-    train_mask_unlabeled = torch.zeros(train_size, dtype=torch.int)
-    indices_unlabeled = seed_mask[n_samples_labeled_set: n_samples_training_set]
-    limit_unlabeled = train_mask_unlabeled.shape[0]
-    valid_indices_unlabeled = indices_unlabeled[indices_unlabeled < limit_unlabeled]
-    train_mask_unlabeled[valid_indices_unlabeled] = 1
-    train_mask_unlabeled = train_mask_unlabeled.unsqueeze(1).to(device)
 
     # calculating train and test graph and plugging labels in combined_output into them
     train_data, _ = k_hop_subgraph(data, torch.nonzero(train_mask).flatten(), 2)
