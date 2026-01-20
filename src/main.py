@@ -2,14 +2,14 @@ import os
 import torch
 import warnings
 
-from src.trainer import train, evaluate
-from src.dataset_loader import load_dataset
-from src.IC_proxy import compute_ic_like_influence_scores
-from src.influence_groups import compare_scores_and_return_groups
-from src.models.hetero_gat import HeteroGAT
-from src.models.mixed_loss import MixedLoss
-from src.simulation.influence_score_ic import compute_influence_scores
-from src.utils import get_device, save_influence_to_json, get_base_dir, to_categorical, build_combined_output, fixed_randperm
+from src.models.gat.trainer import train, evaluate
+from src.dataset.dataset_loader import load_dataset
+from src.influence.proxy.IC_proxy import compute_ic_like_influence_scores
+from src.influence.influence_groups import compare_scores_and_return_groups
+from src.models.gat.hetero_gat import HeteroGAT
+from src.models.gat.mixed_loss import MixedLoss
+from src.influence.simulation.influence_score_ic import compute_influence_scores
+from src.utils import get_device, save_influence_to_json, get_base_dir, to_categorical, build_combined_output
 from src.utils_graph import build_metapath_graphs, compute_layer_probabilities, k_hop_subgraph
 
 
@@ -42,6 +42,7 @@ if __name__ == "__main__":
     percentage_labeled_set = 0.2
     al_cycles = 4
 
+    ##############################################################################
 
     os.makedirs(results_dir, exist_ok=True)
     device = get_device()
@@ -49,27 +50,20 @@ if __name__ == "__main__":
     layer_graphs = build_metapath_graphs(data)
     layer_probs = compute_layer_probabilities(layer_graphs, beta)
 
-    #IC model - ground truth
-    ic_scores = compute_influence_scores(
-        layer_graphs=layer_graphs,
-        layer_probs=layer_probs,
-        num_steps=num_steps,
-        n_sim=n_sim,
-        seed=42,
-        out_dir = results_dir #salva internamente chackpoint
-    )
+    # IC model - ground truth
+    ic_scores = compute_influence_scores(layer_graphs=layer_graphs, layer_probs=layer_probs, num_steps=num_steps, n_sim=n_sim, seed=42, out_dir = results_dir)
 
-    #IC-like scores
+    # IC-like scores
     proxy_scores = compute_ic_like_influence_scores(layer_graphs, layer_probs, normalize=False)
     save_influence_to_json(proxy_scores, os.path.join(results_dir, f"influence_scores_IC_proxy.json"))
 
-    #confronto tra gli scores
-    groups_ic, groups_proxy = compare_scores_and_return_groups(ic_scores, proxy_scores, results_dir) #qui dentro calcolo gruppi
+    # comparison between scores
+    groups_ic, groups_proxy = compare_scores_and_return_groups(ic_scores, proxy_scores, results_dir)
 
-    #data to categorical for first output
+    # data to categorical for first output
     categorical_ic_scores = to_categorical(ic_scores, influence_levels)
 
-    #merging and storing results in data data[data.target_type].y
+    # merging and storing results in data data[data.target_type].y
     combined_output = build_combined_output(categorical_ic_scores, ic_scores, proxy_scores, device)
 
     # training procedure

@@ -1,14 +1,13 @@
 import os
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
 from torch_geometric.utils import to_dense_adj, dense_to_sparse
-from src.competitors.HHGNN.HHGNN import heterodata_to_global_adj, get_mo_cam, HHGNN
-from src.dataset_loader import load_dataset
-from src.simulation.influence_score_ic import compute_influence_scores
-from src.utils import get_device, save_influence_to_json, get_base_dir
+from src._competitors.HHGNN.HHGNN import heterodata_to_global_adj, get_mo_cam, HHGNN
+from src.dataset.dataset_loader import load_dataset
+from src.influence.simulation.influence_score_ic import compute_influence_scores
+from src.utils import get_device, get_base_dir
 from src.utils_graph import build_metapath_graphs, compute_layer_probabilities
 
 if __name__ == "__main__":
