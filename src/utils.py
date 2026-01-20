@@ -5,8 +5,8 @@ import json
 import time
 import numpy
 import copy
-#from sklearn.preprocessing import label_binarize
-#from sklearn.metrics import roc_auc_score
+from sklearn.preprocessing import label_binarize
+from sklearn.metrics import roc_auc_score
 
 from torch_geometric.data import HeteroData
 import torch_geometric.transforms as T
@@ -178,12 +178,12 @@ def save_influence_to_json(influence_dict, filename):
     with open(filename, "w") as f:
         json.dump(existing_data, f, indent=4)
 
-"""
+
 def compute_auc(y_true, y_pred):
     all_classes = numpy.arange(y_pred.shape[1])
     scores = roc_auc_score(y_true=label_binarize(y_true, classes=all_classes), y_score=y_pred, average=None, multi_class="ovo")
     valid_scores = scores[~numpy.isnan(scores)]
-    return numpy.mean(valid_scores)"""
+    return numpy.mean(valid_scores)
 
 def merge_masks(masks):
     if len(masks) == 0:
@@ -223,7 +223,30 @@ def build_combined_output(categorical_ic_scores, ic_scores, proxy_scores, device
             torch.tensor([proxy_scores[idx_node] for idx_node in proxy_scores.keys()]).to(device).reshape(-1, 1))
 
 
+def filter_combined_output(combined_output, indices):
+    categorical_ic_scores, ic_scores, proxy_scores = combined_output
+    return (categorical_ic_scores[indices], ic_scores[indices], proxy_scores[indices])
+
+
 def fixed_randperm(n, k):
     fixed = torch.arange(k)
     suffix = torch.randperm(n - k) + k
     return torch.cat([fixed, suffix])
+
+
+def print_metrics(data):
+    for head, metrics in data.items():
+        print(f"{head.replace('_', ' ').upper()}")
+        print("-" * 50)
+        for key, value in metrics.items():
+            if isinstance(value, (numpy.ndarray, list)):
+                formatted_list = ", ".join([f"{x:.4f}" for x in value])
+                print(f"{key:<15}: [{formatted_list}]")
+
+            elif isinstance(value, (int, float)):
+                print(f"{key:<15}: {value:.4f}")
+
+            else:
+                print(f"{key:<15}: {value}")
+
+        print("-" * 50)

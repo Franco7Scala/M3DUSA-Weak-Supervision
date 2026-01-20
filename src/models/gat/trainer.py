@@ -1,18 +1,19 @@
 import torch
+import numpy
 
-from sklearn.metrics import f1_score, precision_score, recall_score
+from sklearn.metrics import f1_score, precision_score, recall_score, mean_absolute_error, mean_squared_error, r2_score
 from torch_geometric.utils.mask import mask_to_index
 from tqdm import tqdm
 from src.utils import compute_auc
 
 
-def train(model, data, optimizer, criterion, scheduler=None, n_epochs=200):
+def train(model, data, optimizer, criterion, train_mask, scheduler=None, n_epochs=200):
     progress_bar = tqdm(range(n_epochs))
     for epoch in progress_bar:
         model.train()
         optimizer.zero_grad()
         out = model(data.x_dict, data.edge_index_dict)
-        loss = criterion(out[data.target_type], data[data.target_type].y)
+        loss = criterion((out[0][data.target_type], out[1][data.target_type], out[2][data.target_type]), data[data.target_type].y, train_mask)
         loss.backward()
         optimizer.step()
         if scheduler is not None: scheduler.step()
@@ -24,12 +25,36 @@ def train(model, data, optimizer, criterion, scheduler=None, n_epochs=200):
 def evaluate(model, data):
     model.eval()
     with torch.no_grad():
-        out = model(data.x_dict, data.edge_index_dict)
-        pred = out[data.target_type].argmax(dim=-1)
-        pred_prob = torch.nn.functional.softmax(model(data.x_dict, data.edge_index_dict)[data.target_type], -1)
-        f1_micro = f1_score(data[data.target_type].y.cpu(), pred.cpu(), average="micro")
-        f1_macro = f1_score(data[data.target_type].y.cpu(), pred.cpu(), average="macro")
-        auc = compute_auc(data[data.target_type].y.cpu().numpy(), pred_prob.cpu().detach().numpy())
-        precision = precision_score(data[data.target_type].y.cpu(), pred.cpu(), average=None, zero_division=0)
-        recall = recall_score(data[data.target_type].y.cpu(), pred.cpu(), average=None, zero_division=0)
-        return f1_micro, f1_macro, auc, precision, recall
+        out_ic_classification, out_ic_regression, out_proxy_regression = model(data.x_dict, data.edge_index_dict)
+        out_ic_classification = out_ic_classification[data.target_type]
+        out_ic_regression = out_ic_regression[data.target_type]
+        out_proxy_regression = out_proxy_regression[data.target_type]
+        report = {}
+        # IC Classification Head
+        ground_truth = data[data.target_type].y[0].cpu().argmax(dim=-1)
+        pred = out_ic_classification.argmax(dim=-1).cpu()
+        pred_prob = torch.nn.functional.softmax(out_ic_classification, -1)
+        f1_micro = f1_score(ground_truth, pred, average="micro")
+        f1_macro = f1_score(ground_truth, pred, average="macro")
+        precision = precision_score(ground_truth, pred, average=None, zero_division=0)
+        recall = recall_score(ground_truth, pred, average=None, zero_division=0)
+        auc = compute_auc(data[data.target_type].y[0].cpu().numpy(), pred_prob.cpu().detach().numpy())
+        report["ic_classification_head"] = {"f1_micro": f1_micro, "f1_macro": f1_macro, "auc": auc, "precision": precision, "recall": recall}
+
+        def compute_regression_metrics(true, pred):
+            mae = mean_absolute_error(true, pred)
+            mse = mean_squared_error(true, pred)
+            rmse = numpy.sqrt(mse)
+            r2 = r2_score(true, pred)
+            mape = numpy.mean(numpy.abs((true - pred) / true)) * 100
+            return {"mae": mae, "mse": mse, "rmse": rmse, "r2": r2, "mape": mape}
+
+        # IC Regression Head
+        ground_truth = data[data.target_type].y[1].cpu().numpy()
+        pred = out_ic_regression.cpu().numpy()
+        report["ic_regression_head"] = compute_regression_metrics(ground_truth, pred)
+        # Proxy Regression Head
+        ground_truth = data[data.target_type].y[2].cpu().numpy()
+        pred = out_proxy_regression.cpu().numpy()
+        report["proxy_regression_head"] = compute_regression_metrics(ground_truth, pred)
+        return report
