@@ -4,7 +4,7 @@ import numpy as np
 from scipy.stats import spearmanr, kendalltau
 import matplotlib.pyplot as plt
 
-from src.utils import get_base_dir
+from src.support.utils import get_base_dir
 
 
 def ic_percentile_thresholds(ic_scores, low_q=50, high_q=85):

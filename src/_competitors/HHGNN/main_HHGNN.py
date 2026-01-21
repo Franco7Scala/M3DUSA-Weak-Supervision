@@ -7,8 +7,8 @@ from torch_geometric.utils import to_dense_adj, dense_to_sparse
 from src._competitors.HHGNN.HHGNN import heterodata_to_global_adj, get_mo_cam, HHGNN
 from src.dataset.dataset_loader import load_dataset
 from src.influence.simulation.influence_score_ic import compute_influence_scores
-from src.utils import get_device, get_base_dir
-from src.utils_graph import build_metapath_graphs, compute_layer_probabilities
+from src.support.utils import get_device, get_base_dir
+from src.support.utils_graph import build_metapath_graphs, compute_layer_probabilities
 
 if __name__ == "__main__":
     # --- Configurazione ---

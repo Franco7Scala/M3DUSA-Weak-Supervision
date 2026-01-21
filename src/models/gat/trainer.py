@@ -4,7 +4,7 @@ import numpy
 from sklearn.metrics import f1_score, precision_score, recall_score, mean_absolute_error, mean_squared_error, r2_score
 from torch_geometric.utils.mask import mask_to_index
 from tqdm import tqdm
-from src.utils import compute_auc
+from src.support.utils import compute_auc
 
 
 def train(model, data, optimizer, criterion, train_mask, scheduler=None, n_epochs=200):

@@ -1,7 +1,7 @@
 import random
 from network_diffusion.models import BaseModel, NetworkUpdateBuffer
 
-from src.utils import get_time_in_millis
+from src.support.utils import get_time_in_millis
 
 """
 Multilayer Independent Cascade model

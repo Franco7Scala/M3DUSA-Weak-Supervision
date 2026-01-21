@@ -6,8 +6,8 @@ from network_diffusion import mln
 from network_diffusion.simulator import Simulator
 
 from src.models.diffusion_multilayer_ic import MultiLayerICModel
-from src.utils import save_influence_to_csv, save_influence_to_json
-from src.utils_graph import precompute_neighbor_probs
+from src.support.utils import save_influence_to_csv, save_influence_to_json
+from src.support.utils_graph import precompute_neighbor_probs
 
 """
 Computes influence of each node as if it's the ONLY seed.

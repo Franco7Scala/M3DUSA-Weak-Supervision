@@ -1,8 +1,8 @@
 import networkx as nx
 import torch
+
 from collections import defaultdict
 
-from src.utils import metapath_key, edge_key
 
 """
 Constructs weighted homogeneous graphs for each metapath and edge that starts and ends in data.target_type.
@@ -202,7 +202,23 @@ def _merge_masks(first_mask, second_mask):
     return merged_mask
 
 
+def metapath_key(metapath): #metapath: list of (src, rel, dst)
+
+    node_types = []
+    for i, (src, _, dst) in enumerate(metapath):
+        if i == 0:
+            node_types.append(src)
+        node_types.append(dst)
+    initials = [nt[0].upper() for nt in node_types]
+    # Compress consecutive duplicates
+    key = []
+    for ch in initials:
+        if not key or key[-1] != ch:
+            key.append(ch)
+    return "".join(key)
 
 
+def edge_key(edge): #edge: tuple (src, rel, dst)
 
-
+    src, rel, dst = edge
+    return f"{src[0].upper()}{dst[0].upper()}_{rel[0].lower()}"
