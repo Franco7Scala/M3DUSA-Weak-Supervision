@@ -16,7 +16,7 @@ class MixedLoss(nn.Module):
         if mask is not None:
             ic_classification_loss = _masked_EMDLoss(output[0], target[0], mask) * self.weight_ic_classification
             ic_regression_loss = _masked_RMSELoss(output[1], target[1], mask) * self.weight_ic_regression
-            proxy_regression_loss = _masked_RMSELoss(output[2], target[2], mask) * self.weight_proxy_regression
+            proxy_regression_loss = RMSELoss(output[2], target[2]) * self.weight_proxy_regression
 
         else:
             ic_classification_loss = _EMDLoss(output[0], target[0]) * self.weight_ic_classification
