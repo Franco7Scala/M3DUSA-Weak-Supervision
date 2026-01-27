@@ -37,7 +37,7 @@ def parse_arguments():
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility.")
     parser.add_argument("--show-plots", type=str2bool, default=False, help="Whether to display plots during execution.")
     parser.add_argument("--weight-ic-classification", type=float, default=1, help="Weight for IC classification head loss.")
-    parser.add_argument("--weight-ic-regression", type=float, default=2.0, help="Weight for IC regression head loss.")
+    parser.add_argument("--weight-ic-regression", type=float, default=1.0, help="Weight for IC regression head loss.")
     parser.add_argument("--weight-proxy-regression", type=float, default=1, help="Weight for proxy regression head loss.")
 
     return parser.parse_args()

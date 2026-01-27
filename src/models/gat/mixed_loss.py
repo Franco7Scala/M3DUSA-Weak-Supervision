@@ -6,7 +6,7 @@ from torch.nn import functional as F
 
 class MixedLoss(nn.Module):
 
-    def __init__(self, weight_ic_classification=1, weight_ic_regression=2.0, weight_proxy_regression=1):
+    def __init__(self, weight_ic_classification=1.0, weight_ic_regression=1.0, weight_proxy_regression=1.0):
         super(MixedLoss, self).__init__()
         self.weight_ic_classification = weight_ic_classification
         self.weight_ic_regression = weight_ic_regression

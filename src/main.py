@@ -17,8 +17,8 @@ from src.models.gat.hetero_gat import HeteroGAT
 from src.models.gat.mixed_loss import MixedLoss
 from src.influence.simulation.influence_score_ic import compute_influence_scores
 from src.support.arguments import parse_arguments
-from src.support.utils import get_device, save_influence_to_json, get_base_dir, to_categorical, build_combined_output, filter_combined_output, print_metrics, Color, cprint, normalize, print_args, seed_everything, print_data_analysys, plot_ranking_comparison, plot_data_distribution, apply_pca
-from src.support.utils_graph import build_metapath_graphs, compute_layer_probabilities, k_hop_subgraph
+from src.support.utils import get_device, save_influence_to_json, get_base_dir, to_categorical, build_combined_output, print_metrics, Color, cprint, normalize, print_args, seed_everything, print_data_analysys, plot_ranking_comparison, plot_data_distribution
+from src.support.utils_graph import build_metapath_graphs, compute_layer_probabilities
 
 
 if __name__ == "__main__":
@@ -73,7 +73,7 @@ if __name__ == "__main__":
 
     # normalization of influence scores and data analysis
     train_indices = train_mask_labeled.flatten().nonzero().cpu().flatten().tolist()
-    ic_scores = normalize(ic_scores, train_indices, normalization_type="z-score")
+    ic_scores = normalize(ic_scores, train_indices, normalization_type="min-max")
     cprint(f"Analysis on IC data:", Color.EXPERIMENT_CONFIG_INFO)
     print_data_analysys(torch.tensor(list(ic_scores.values())))
     if args.show_plots:

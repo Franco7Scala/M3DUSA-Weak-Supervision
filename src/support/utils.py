@@ -194,7 +194,7 @@ def normalize(data: dict, train_indices: list, normalization_type="none") -> dic
 
         return {key: (value - avg) / std_dev for key, value in data.items()}
 
-    if normalization_type == "min_max":
+    if normalization_type == "min-max":
         min_val = numpy.min(train_values)
         max_val = numpy.max(train_values)
         value_range = max_val - min_val
