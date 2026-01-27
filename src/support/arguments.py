@@ -1,6 +1,8 @@
 import argparse
 import os
 
+from src.support.utils import str2bool
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Parse arguments for influence maximization and active learning experiments.")
@@ -16,22 +18,26 @@ def parse_arguments():
     parser.add_argument("--num-hops", type=int, default=2, help="Number of hops for computation.")
 
     # Model parameters
-    parser.add_argument("--hidden-channels", type=int, default=3, help="Number of hidden channels.")
-    parser.add_argument("--out-channels", type=int, default=3, help="Number of output channels.")
+    parser.add_argument("--hidden-channels", type=int, default=16, help="Number of hidden channels.")
     parser.add_argument("--dropout", type=float, default=0.3, help="Dropout rate.")
     parser.add_argument("--num-layers", type=int, default=3, help="Number of layers in the model.")
 
     # Data parameters
-    parser.add_argument("--influence-levels", type=int, default=3, help="Number of influence levels (e.g., low, medium, high).")
+    parser.add_argument("--influence-levels", type=int, default=5, help="Number of influence levels (e.g., low, medium, high).")
 
     # Training parameters
-    parser.add_argument("--learning-rate", type=float, default=0.01, help="Learning rate.")
-    parser.add_argument("--weight-decay", type=float, default=0.001, help="Weight decay for optimization.")
-    parser.add_argument("--training-epochs", type=int, default=100, help="Number of training epochs.")
+    parser.add_argument("--learning-rate", type=float, default=0.001, help="Learning rate.")
+    parser.add_argument("--weight-decay", type=float, default=1e-4, help="Weight decay for optimization.")
+    parser.add_argument("--training-epochs", type=int, default=200, help="Number of training epochs.")
     parser.add_argument("--percentage-training-set", type=float, default=0.8, help="Percentage of data to use for training.")
     parser.add_argument("--percentage-labeled-set", type=float, default=0.2, help="Percentage of data that is labeled.")
     parser.add_argument("--al-cycles", type=int, default=10, help="Number of Active Learning cycles.")
     parser.add_argument("--al-technique", type=str, default="MarginALTechnique", help="Active Learning technique class name.")
     parser.add_argument("--k", type=int, default=500, help="Number of nodes to sample per AL cycle.")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility.")
+    parser.add_argument("--show-plots", type=str2bool, default=False, help="Whether to display plots during execution.")
+    parser.add_argument("--weight-ic-classification", type=float, default=1, help="Weight for IC classification head loss.")
+    parser.add_argument("--weight-ic-regression", type=float, default=2.0, help="Weight for IC regression head loss.")
+    parser.add_argument("--weight-proxy-regression", type=float, default=1, help="Weight for proxy regression head loss.")
 
     return parser.parse_args()

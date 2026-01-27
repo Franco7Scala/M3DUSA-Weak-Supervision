@@ -9,10 +9,7 @@ class ActiveLearningSampler:
         self.al_technique = al_technique
         self.k = k
 
-    def sample(self, data, train_mask_labeled):
-        train_mask_unlabeled = 1 - train_mask_labeled
-        train_mask_unlabeled = train_mask_unlabeled.squeeze()
-
+    def sample(self, data, train_mask_labeled, train_mask_unlabeled):
         node_scores = []
         node_subgraph = k_hop_subgraph(data, torch.nonzero(train_mask_unlabeled).flatten(), 2)[0].to(data.device)
         scores = self.al_technique.get_score(node_subgraph, data.target_type)

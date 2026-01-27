@@ -2,7 +2,6 @@ import torch
 import numpy
 
 from sklearn.metrics import f1_score, precision_score, recall_score, mean_absolute_error, mean_squared_error, r2_score
-from torch_geometric.utils.mask import mask_to_index
 from tqdm import tqdm
 from src.support.utils import compute_auc
 
@@ -22,23 +21,23 @@ def train(model, data, optimizer, criterion, train_mask, scheduler=None, n_epoch
     return model
 
 
-def evaluate(model, data):
+def evaluate(model, data, mask):
     model.eval()
     with torch.no_grad():
         out_ic_classification, out_ic_regression, out_proxy_regression = model(data.x_dict, data.edge_index_dict)
-        out_ic_classification = out_ic_classification[data.target_type]
-        out_ic_regression = out_ic_regression[data.target_type]
-        out_proxy_regression = out_proxy_regression[data.target_type]
+        out_ic_classification = out_ic_classification[data.target_type][mask.squeeze().bool()]
+        out_ic_regression = out_ic_regression[data.target_type][mask.squeeze().bool()]
+        out_proxy_regression = out_proxy_regression[data.target_type][mask.squeeze().bool()]
         report = {}
         # IC Classification Head
-        ground_truth = data[data.target_type].y[0].cpu().argmax(dim=-1)
+        ground_truth = data[data.target_type].y[0][mask.squeeze().bool()].cpu().argmax(dim=-1)
         pred = out_ic_classification.argmax(dim=-1).cpu()
         pred_prob = torch.nn.functional.softmax(out_ic_classification, -1)
         f1_micro = f1_score(ground_truth, pred, average="micro")
         f1_macro = f1_score(ground_truth, pred, average="macro")
         precision = precision_score(ground_truth, pred, average=None, zero_division=0)
         recall = recall_score(ground_truth, pred, average=None, zero_division=0)
-        auc = compute_auc(data[data.target_type].y[0].cpu().numpy(), pred_prob.cpu().detach().numpy())
+        auc = compute_auc(data[data.target_type].y[0][mask.squeeze().bool()].cpu().numpy(), pred_prob.cpu().detach().numpy())
         report["ic_classification_head"] = {"f1_micro": f1_micro, "f1_macro": f1_macro, "auc": auc, "precision": precision, "recall": recall}
 
         def compute_regression_metrics(true, pred):
@@ -50,11 +49,11 @@ def evaluate(model, data):
             return {"mae": mae, "mse": mse, "rmse": rmse, "r2": r2, "mape": mape}
 
         # IC Regression Head
-        ground_truth = data[data.target_type].y[1].cpu().numpy()
+        ground_truth = data[data.target_type].y[1][mask.squeeze().bool()].cpu().numpy()
         pred = out_ic_regression.cpu().numpy()
         report["ic_regression_head"] = compute_regression_metrics(ground_truth, pred)
         # Proxy Regression Head
-        ground_truth = data[data.target_type].y[2].cpu().numpy()
+        ground_truth = data[data.target_type].y[2][mask.squeeze().bool()].cpu().numpy()
         pred = out_proxy_regression.cpu().numpy()
         report["proxy_regression_head"] = compute_regression_metrics(ground_truth, pred)
         return report
