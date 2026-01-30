@@ -1,6 +1,7 @@
 import os
 import torch
 
+from torch_geometric.data.hetero_data import HeteroData
 from torch_geometric.datasets import IMDB, AMiner
 from torch_geometric.datasets.dblp import DBLP
 import torch_geometric.transforms as T
@@ -154,3 +155,14 @@ def _build_heterodata(dataset_name, target_type):
     data = transform(data)
 
     return data
+
+
+def _extract_edge_info(fname):
+    last_dot = fname.rfind(".")
+    fname_base = fname[:last_dot]
+    first_underscore = fname_base.find("_")  # first occurrence
+    last_underscore = fname_base.rfind("_")  # last occurrence
+    n_type_src = fname_base[:first_underscore]
+    e_type = fname_base[first_underscore + 1:last_underscore]
+    n_type_tgt = fname_base[last_underscore + 1:]
+    return n_type_src, n_type_tgt, e_type

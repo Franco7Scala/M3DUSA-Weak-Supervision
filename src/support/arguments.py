@@ -39,5 +39,6 @@ def parse_arguments():
     parser.add_argument("--weight-ic-classification", type=float, default=1, help="Weight for IC classification head loss.")
     parser.add_argument("--weight-ic-regression", type=float, default=1.0, help="Weight for IC regression head loss.")
     parser.add_argument("--weight-proxy-regression", type=float, default=1, help="Weight for proxy regression head loss.")
-
+    parser.add_argument("--stratified-sampling", type=str2bool, default=False, help="Whether to use stratified sampling at first selection based on proxy measure.")
+    parser.add_argument("--loss", type=str, default="mixed_loss", help="Loss function to use (e.g., 'mae', 'mixed_loss').")
     return parser.parse_args()

@@ -6,6 +6,7 @@ import time
 import numpy
 import copy
 import math
+import random
 import matplotlib.pyplot as plt
 
 from enum import Enum
@@ -302,3 +303,18 @@ def str2bool(v):
 
     else:
         raise Exception("Boolean value expected.")
+
+
+def stratified_sampling(proxy_scores, seed_mask, n_samples_in_head, n_levels):
+    sorted_indexes = sorted(seed_mask.cpu().tolist(), key=lambda i: proxy_scores[list(proxy_scores.keys())[i]])
+    level_size = len(sorted_indexes) // n_levels
+    k_per_level = n_samples_in_head // n_levels
+
+    selected_indexes = []
+    for level in range(0, n_levels):
+        selected_indexes.extend(random.sample(sorted_indexes[(level * level_size): ((level + 1) * level_size)], k_per_level))
+
+    selected_indexes = torch.tensor(selected_indexes, device=seed_mask.device)
+    mask = torch.isin(seed_mask, selected_indexes)
+    remaining_indexes = seed_mask[~mask]
+    return torch.cat([selected_indexes, remaining_indexes], dim=0)

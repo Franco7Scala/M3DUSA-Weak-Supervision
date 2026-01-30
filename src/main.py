@@ -15,9 +15,10 @@ from src.influence.proxy.IC_proxy import compute_ic_like_influence_scores
 from src.influence.influence_groups import compare_scores_and_return_groups
 from src.models.gat.hetero_gat import HeteroGAT
 from src.models.gat.mixed_loss import MixedLoss
+from src.models.gat.mae_loss import MAELoss
 from src.influence.simulation.influence_score_ic import compute_influence_scores
 from src.support.arguments import parse_arguments
-from src.support.utils import get_device, save_influence_to_json, get_base_dir, to_categorical, build_combined_output, print_metrics, Color, cprint, normalize, print_args, seed_everything, print_data_analysys, plot_ranking_comparison, plot_data_distribution
+from src.support.utils import *
 from src.support.utils_graph import build_metapath_graphs, compute_layer_probabilities
 
 
@@ -51,7 +52,15 @@ if __name__ == "__main__":
     cprint("Building model...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
     model = HeteroGAT(metadata=data.metadata(), target_type=data.target_type, hidden_channels=args.hidden_channels, out_channels=args.influence_levels, dropout=args.dropout, num_layers=args.num_layers).to(device)
     node_sampler = ActiveLearningSampler(al_technique(model), args.k)
-    criterion = MixedLoss(weight_ic_classification=args.weight_ic_classification, weight_ic_regression=args.weight_ic_regression, weight_proxy_regression=args.weight_proxy_regression)
+    if args.loss == "mixed_loss":
+        criterion = MixedLoss(weight_ic_classification=args.weight_ic_classification, weight_ic_regression=args.weight_ic_regression, weight_proxy_regression=args.weight_proxy_regression)
+
+    elif args.loss == "mae":
+        criterion = MAELoss()
+
+    else:
+        raise ValueError(f"Loss function '{args.loss}' not recognized.")
+
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
 
     cprint("Preparing data...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
@@ -59,6 +68,8 @@ if __name__ == "__main__":
     n_samples_training_set = int(size * args.percentage_training_set)
     n_samples_labeled_set = int(n_samples_training_set * args.percentage_labeled_set)
     seed_mask = torch.randperm(size)
+    if args.stratified_sampling:
+        seed_mask = stratified_sampling(proxy_scores, seed_mask, n_samples_labeled_set, args.influence_levels)
 
     # building masks
     train_mask_labeled = torch.zeros(size, dtype=torch.int)
@@ -111,6 +122,6 @@ if __name__ == "__main__":
     torch.save(model.state_dict(), f"{results_dir}/hetero_gat_model_final.ckpt")
     if args.show_plots:
         plot_ranking_comparison(data[data.target_type].y[1][test_mask.squeeze().bool()], model(data.x_dict, data.edge_index_dict)[1][data.target_type][test_mask.squeeze().bool()], ("IC scores real", "IC scores predicted"))
-        plot_ranking_comparison(data[data.target_type].y[2][test_mask.squeeze().bool()], model(data.x_dict, data.edge_index_dict)[2][data.target_type][test_mask.squeeze().bool()], ("IC scores real", "IC scores predicted"))
+        plot_ranking_comparison(data[data.target_type].y[2][test_mask.squeeze().bool()], model(data.x_dict, data.edge_index_dict)[2][data.target_type][test_mask.squeeze().bool()], ("Proxy scores real", "Proxy scores predicted"))
 
     cprint("Completed!", Color.OTHER)
