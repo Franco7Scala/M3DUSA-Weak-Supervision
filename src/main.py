@@ -1,6 +1,4 @@
 import sys
-import os
-import torch
 import warnings
 
 
@@ -9,13 +7,14 @@ from src.active_learning.al_techniques.entropy_al_technique import EntropyALTech
 from src.active_learning.al_techniques.lcs_al_technique import LCSALTechnique
 from src.active_learning.al_techniques.random_al_technique import RandomALTechnique
 from src.active_learning.node_sampler import ActiveLearningSampler
+from src.models.gat.losses.nc_loss import NCLoss
 from src.models.gat.trainer import train, evaluate
 from src.dataset.dataset_loader import load_dataset
 from src.influence.proxy.IC_proxy import compute_ic_like_influence_scores
 from src.influence.influence_groups import compare_scores_and_return_groups
 from src.models.gat.hetero_gat import HeteroGAT
-from src.models.gat.mixed_loss import MixedLoss
-from src.models.gat.mae_loss import MAELoss
+from src.models.gat.losses.mixed_loss import MixedLoss
+from src.models.gat.losses.mae_loss import MAELoss
 from src.influence.simulation.influence_score_ic import compute_influence_scores
 from src.support.arguments import parse_arguments
 from src.support.utils import *
@@ -57,6 +56,9 @@ if __name__ == "__main__":
 
     elif args.loss == "mae":
         criterion = MAELoss()
+
+    elif args.loss == "nc":
+        criterion = NCLoss()
 
     else:
         raise ValueError(f"Loss function '{args.loss}' not recognized.")

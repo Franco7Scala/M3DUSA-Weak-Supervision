@@ -1,8 +1,5 @@
-import torch
-
 from torch import nn
-from torch.nn import functional as F
-from src.models.gat.mixed_loss import _masked_MAELoss
+from src.models.gat.losses.mixed_loss import _masked_MAELoss, _MAELoss
 
 
 class MAELoss(nn.Module):

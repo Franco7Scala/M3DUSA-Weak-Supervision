@@ -2,7 +2,7 @@ import torch
 
 from torch import nn
 from torch.nn import functional as F
-from src.models.gat.consistency_loss import ConsistencyLoss
+from src.models.gat.losses.consistency_loss import ConsistencyLoss
 
 
 class MixedLoss(nn.Module):
