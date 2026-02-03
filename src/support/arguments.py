@@ -42,4 +42,6 @@ def parse_arguments():
     parser.add_argument("--weight-consistency", type=float, default=1.0, help="Weight for Consistency head loss between ic's heads.")
     parser.add_argument("--stratified-sampling", type=str2bool, default=False, help="Whether to use stratified sampling at first selection based on proxy measure.")
     parser.add_argument("--loss", type=str, default="mixed_loss", help="Loss function to use (e.g., 'mae', 'mixed_loss').")
+    parser.add_argument("--connectivity-evaluation-bound", type=int, default=20, help="Number of nodes to consider for connectivity measures evaluation (0 to disable).")
+
     return parser.parse_args()

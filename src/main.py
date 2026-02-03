@@ -18,7 +18,7 @@ from src.models.gat.losses.mae_loss import MAELoss
 from src.influence.simulation.influence_score_ic import compute_influence_scores
 from src.support.arguments import parse_arguments
 from src.support.utils import *
-from src.support.utils_graph import build_metapath_graphs, compute_layer_probabilities
+from src.support.utils_graph import build_metapath_graphs, compute_layer_probabilities, compute_incremental_con_measure
 
 
 if __name__ == "__main__":
@@ -112,7 +112,7 @@ if __name__ == "__main__":
         report = evaluate(model, data, train_mask_labeled)
         cprint("on training set...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
         print_metrics(report)
-        report = evaluate(model, data, test_mask)
+        report = evaluate(model, data, test_mask, -1)
         cprint("on test set...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
         print_metrics(report)
         # AL sampling - updating "train_mask_labeled" adding the new selected nodes
@@ -122,6 +122,11 @@ if __name__ == "__main__":
 
     cprint(f"Saving model in '{results_dir}/hetero_gat_model_final.ckpt'...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
     torch.save(model.state_dict(), f"{results_dir}/hetero_gat_model_final.ckpt")
+
+    report = evaluate(model, data, test_mask, )
+    cprint("Final evaluation on test set with connectivity computation...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
+    print_metrics(report)
+
     if args.show_plots:
         plot_ranking_comparison(data[data.target_type].y[1][test_mask.squeeze().bool()], model(data.x_dict, data.edge_index_dict)[1][data.target_type][test_mask.squeeze().bool()], ("IC scores real", "IC scores predicted"))
         plot_ranking_comparison(data[data.target_type].y[2][test_mask.squeeze().bool()], model(data.x_dict, data.edge_index_dict)[2][data.target_type][test_mask.squeeze().bool()], ("Proxy scores real", "Proxy scores predicted"))

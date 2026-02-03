@@ -4,6 +4,7 @@ import numpy
 from sklearn.metrics import f1_score, precision_score, recall_score, mean_absolute_error, mean_squared_error, r2_score
 from tqdm import tqdm
 from src.support.utils import compute_auc
+from src.support.utils_graph import compute_incremental_con_measure
 
 
 def train(model, data, optimizer, criterion, train_mask, scheduler=None, n_epochs=200):
@@ -21,13 +22,13 @@ def train(model, data, optimizer, criterion, train_mask, scheduler=None, n_epoch
     return model
 
 
-def evaluate(model, data, mask):
+def evaluate(model, data, mask, connectivity_bound=20):
     model.eval()
     with torch.no_grad():
-        out_ic_classification, out_ic_regression, out_proxy_regression = model(data.x_dict, data.edge_index_dict)
-        out_ic_classification = out_ic_classification[data.target_type][mask.squeeze().bool()]
-        out_ic_regression = out_ic_regression[data.target_type][mask.squeeze().bool()]
-        out_proxy_regression = out_proxy_regression[data.target_type][mask.squeeze().bool()]
+        out_ic_classification_full, out_ic_regression_full, out_proxy_regression_full = model(data.x_dict, data.edge_index_dict)
+        out_ic_classification = out_ic_classification_full[data.target_type][mask.squeeze().bool()]
+        out_ic_regression = out_ic_regression_full[data.target_type][mask.squeeze().bool()]
+        out_proxy_regression = out_proxy_regression_full[data.target_type][mask.squeeze().bool()]
         report = {}
         # IC Classification Head
         ground_truth = data[data.target_type].y[0][mask.squeeze().bool()].cpu().argmax(dim=-1)
@@ -56,4 +57,9 @@ def evaluate(model, data, mask):
         ground_truth = data[data.target_type].y[2][mask.squeeze().bool()].cpu().numpy()
         pred = out_proxy_regression.cpu().numpy()
         report["proxy_regression_head"] = compute_regression_metrics(ground_truth, pred)
+        # Connectivity measures
+        if connectivity_bound > 0:
+            indices = torch.argsort(out_ic_regression_full[data.target_type].squeeze(), descending=False).cpu().squeeze().tolist()[:connectivity_bound]
+            report["con_measures"] = compute_incremental_con_measure(indices, data, False)
+
         return report

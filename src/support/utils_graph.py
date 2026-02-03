@@ -1,6 +1,8 @@
 import networkx as nx
 import torch
 
+from torch_geometric.data import HeteroData
+from torch_geometric.utils import to_networkx
 from collections import defaultdict
 
 
@@ -219,6 +221,35 @@ def metapath_key(metapath): #metapath: list of (src, rel, dst)
 
 
 def edge_key(edge): #edge: tuple (src, rel, dst)
-
     src, rel, dst = edge
     return f"{src[0].upper()}{dst[0].upper()}_{rel[0].lower()}"
+
+
+def find_connected_components(data, directed):
+    g = to_networkx(data.to_homogeneous(), to_undirected=not directed)
+    return list(nx.connected_components(g))
+
+
+def count_connected_components(data, directed):
+    return len(find_connected_components(data, directed))
+
+
+def compute_con_measure(data, directed):
+    g = to_networkx(data[0].to_homogeneous(), to_undirected=not directed)
+    connected_components = len(list(nx.connected_components(g)))
+    number_of_nodes = g.number_of_nodes()
+    return connected_components / number_of_nodes
+
+
+def compute_incremental_con_measure(nodes_to_remove, data, directed):
+    size = data[data.target_type].x.shape[0]
+    selected_nodes = []
+    con_measures = []
+    for node in nodes_to_remove:
+        selected_nodes.append(node)
+        mask = torch.ones(size).to(int)
+        mask[selected_nodes] = 0
+        sub_data = k_hop_subgraph(data, mask, 2)
+        con_measures.append(compute_con_measure(sub_data, directed))
+
+    return con_measures
