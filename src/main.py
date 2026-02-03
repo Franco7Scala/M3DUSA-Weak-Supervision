@@ -53,7 +53,7 @@ if __name__ == "__main__":
     model = HeteroGAT(metadata=data.metadata(), target_type=data.target_type, hidden_channels=args.hidden_channels, out_channels=args.influence_levels, dropout=args.dropout, num_layers=args.num_layers).to(device)
     node_sampler = ActiveLearningSampler(al_technique(model), args.k)
     if args.loss == "mixed_loss":
-        criterion = MixedLoss(weight_ic_classification=args.weight_ic_classification, weight_ic_regression=args.weight_ic_regression, weight_proxy_regression=args.weight_proxy_regression)
+        criterion = MixedLoss(weight_ic_classification=args.weight_ic_classification, weight_ic_regression=args.weight_ic_regression, weight_proxy_regression=args.weight_proxy_regression, weight_consistency=args.weight_consistency)
 
     elif args.loss == "mae":
         criterion = MAELoss()

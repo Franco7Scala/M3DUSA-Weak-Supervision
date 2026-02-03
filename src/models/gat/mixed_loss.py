@@ -2,15 +2,18 @@ import torch
 
 from torch import nn
 from torch.nn import functional as F
+from src.models.gat.consistency_loss import ConsistencyLoss
 
 
 class MixedLoss(nn.Module):
 
-    def __init__(self, weight_ic_classification=1.0, weight_ic_regression=1.0, weight_proxy_regression=1.0):
+    def __init__(self, weight_ic_classification=1.0, weight_ic_regression=1.0, weight_proxy_regression=1.0, weight_consistency=1.0):
         super(MixedLoss, self).__init__()
         self.weight_ic_classification = weight_ic_classification
         self.weight_ic_regression = weight_ic_regression
         self.weight_proxy_regression = weight_proxy_regression
+        self.weight_consistency = weight_consistency
+        self.consistency_loss = ConsistencyLoss()
 
     def forward(self, output, target, mask=None):
         if mask is not None:
@@ -21,8 +24,9 @@ class MixedLoss(nn.Module):
             ic_classification_loss = _EMDLoss(output[0], target[0]) * self.weight_ic_classification
             ic_regression_loss = _MAELoss(output[1], target[1]) * self.weight_ic_regression
 
+        consistency_loss = self.consistency_loss(output[0], output[1]) * self.weight_consistency
         proxy_regression_loss = _MAELoss(output[2], target[2]) * self.weight_proxy_regression
-        return ic_classification_loss + ic_regression_loss + proxy_regression_loss
+        return ic_classification_loss + ic_regression_loss + proxy_regression_loss + consistency_loss
 
 
 def _RMSELoss(y_pred, y_true):
