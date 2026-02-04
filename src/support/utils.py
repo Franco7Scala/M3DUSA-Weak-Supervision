@@ -15,6 +15,8 @@ from sklearn.metrics import roc_auc_score
 from sklearn.decomposition import PCA
 from torch_geometric.data import HeteroData
 from torch_geometric.utils import dropout_edge
+from scipy.stats import spearmanr, kendalltau
+from src.support.ranking_comparison import jaccard_index, precision_at_k, ndcg
 
 
 class Color(Enum):
@@ -229,6 +231,20 @@ def print_data_analysys(data):
     print("Standard deviation:", data.std().item())
     print("Minimum:", data.min().item())
     print("Maximum:", data.max().item())
+
+
+def print_ranking_comparison(real_scores, predicted_scores):
+    real_scores = real_scores.flatten()
+    predicted_scores = predicted_scores.flatten()
+    real_scores_sorted = torch.argsort(real_scores).cpu().tolist()
+    predicted_scores_sorted = torch.argsort(predicted_scores).cpu().tolist()
+    real_scores = real_scores.cpu().tolist()
+    predicted_scores = predicted_scores.cpu().tolist()
+    cprint(f"Spearman's rho: {spearmanr(real_scores, predicted_scores)[0]}", Color.EXPERIMENT_OUTPUT)
+    cprint(f"Kendall's tau: {kendalltau(real_scores, predicted_scores)[0]}", Color.EXPERIMENT_OUTPUT)
+    cprint(f"Jaccard Index @100: {jaccard_index(real_scores_sorted, predicted_scores_sorted, 100)}", Color.EXPERIMENT_OUTPUT)
+    cprint(f"Precision@100: {precision_at_k(real_scores_sorted, predicted_scores_sorted, 100)}", Color.EXPERIMENT_OUTPUT)
+    cprint(f"NDCG@100: {ndcg(real_scores_sorted, predicted_scores_sorted, 100)}", Color.EXPERIMENT_OUTPUT)
 
 
 def plot_data_distribution(values, label):

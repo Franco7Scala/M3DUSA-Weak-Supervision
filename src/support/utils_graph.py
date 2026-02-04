@@ -235,21 +235,22 @@ def count_connected_components(data, directed):
 
 
 def compute_con_measure(data, directed):
-    g = to_networkx(data[0].to_homogeneous(), to_undirected=not directed)
-    connected_components = len(list(nx.connected_components(g)))
+    g = to_networkx(data.to_homogeneous(), to_undirected=not directed)
+    size_largest_connected_component = [len(c) for c in sorted(nx.connected_components(g), key=len, reverse=True)][0]
     number_of_nodes = g.number_of_nodes()
-    return connected_components / number_of_nodes
+    return size_largest_connected_component / number_of_nodes
 
 
-def compute_incremental_con_measure(nodes_to_remove, data, directed):
+def compute_incremental_con_measure(set_of_nodes, n_to_remove, data, directed):
     size = data[data.target_type].x.shape[0]
-    selected_nodes = []
     con_measures = []
-    for node in nodes_to_remove:
-        selected_nodes.append(node)
+    step = len(set_of_nodes) // n_to_remove
+    for i in range(step, (len(set_of_nodes) - step), step):
+        node_set = set_of_nodes[:i]
         mask = torch.ones(size).to(int)
-        mask[selected_nodes] = 0
+        mask[node_set] = 0
+        mask = mask.nonzero().squeeze()
         sub_data = k_hop_subgraph(data, mask, 2)
-        con_measures.append(compute_con_measure(sub_data, directed))
+        con_measures.append(compute_con_measure(sub_data[0], directed))
 
     return con_measures
