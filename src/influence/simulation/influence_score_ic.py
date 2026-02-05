@@ -12,7 +12,7 @@ from src.support.utils_graph import precompute_neighbor_probs
 """
 Computes influence of each node as if it's the ONLY seed.
 """
-def compute_influence_scores(layer_graphs, layer_probs, num_steps=5, n_sim=200, seed=42, out_dir=None):
+def compute_influence_scores(layer_graphs, layer_probs, num_steps=5, n_sim=200, seed=42, descending_order=False, out_dir=None):
     if seed is not None:
         random.seed(seed)
 
@@ -25,7 +25,7 @@ def compute_influence_scores(layer_graphs, layer_probs, num_steps=5, n_sim=200, 
     nodes = set()
     for lnodes in nodes_in_layer.values():
         nodes |= set(lnodes)
-    nodes = sorted(nodes)
+    nodes = sorted(nodes, reverse=descending_order)
 
     out_file = os.path.join(out_dir, f"influence_scores_{num_steps}steps.json")
 
@@ -73,7 +73,7 @@ def compute_influence_scores(layer_graphs, layer_probs, num_steps=5, n_sim=200, 
         influence_checkpoint[node] = score
         print(f"\n Node {node}: {score}")
 
-        if node%50==0:
+        if node%20==0:
             save_influence_to_csv(influence_checkpoint, os.path.join(out_dir, f"influence_scores_{num_steps}steps.csv"))
             save_influence_to_json(influence_checkpoint, os.path.join(out_dir, f"influence_scores_{num_steps}steps.json"))
             influence_checkpoint = {}

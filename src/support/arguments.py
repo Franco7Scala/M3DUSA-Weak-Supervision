@@ -15,6 +15,7 @@ def parse_arguments():
     parser.add_argument("--num-steps", type=int, default=3, help="Number of diffusion epochs (5-20).")
     parser.add_argument("--n-sim", type=int, default=3, help="Number of independent Monte-Carlo simulations per seed (200+ for research, 20–50 for quick experiments).")
     parser.add_argument("--reduction-factor", type=int, default=1, help="Reduction factor for graph size (e.g., 4-8).")
+    parser.add_argument("--descending-order", type=str2bool, default=False, help="Whether to process nodes in descending order of their IDs.")
     parser.add_argument("--num-hops", type=int, default=2, help="Number of hops for computation.")
 
     # Model parameters
