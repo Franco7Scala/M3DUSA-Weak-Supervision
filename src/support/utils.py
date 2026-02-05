@@ -8,15 +8,17 @@ import copy
 import math
 import random
 import matplotlib.pyplot as plt
+import networkx as nx
 
 from enum import Enum
 from sklearn.preprocessing import label_binarize, QuantileTransformer
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, f1_score, precision_score, recall_score, mean_absolute_error, mean_squared_error, r2_score
 from sklearn.decomposition import PCA
 from torch_geometric.data import HeteroData
 from torch_geometric.utils import dropout_edge
 from scipy.stats import spearmanr, kendalltau
 from src.support.ranking_comparison import jaccard_index, precision_at_k, ndcg
+from src.support.utils_graph import compute_incremental_con_measure
 
 
 class Color(Enum):
@@ -334,3 +336,57 @@ def stratified_sampling(proxy_scores, seed_mask, n_samples_in_head, n_levels):
     mask = torch.isin(seed_mask, selected_indexes)
     remaining_indexes = seed_mask[~mask]
     return torch.cat([selected_indexes, remaining_indexes], dim=0)
+
+
+def get_topk_centrality_nodes(g, user_id_map, centrality_measure):
+    if centrality_measure == "degree":
+        centrality = nx.degree_centrality(g)
+
+    elif centrality_measure == "closeness":
+        centrality = nx.closeness_centrality(g)
+
+    elif centrality_measure == "betweenness":
+        centrality = nx.betweenness_centrality(g)
+
+    elif centrality_measure == "eigenvector":
+        centrality = nx.eigenvector_centrality(g, max_iter=500)
+
+    elif centrality_measure == "pagerank":
+        centrality = nx.pagerank(g)
+
+    elif centrality_measure == "katz":
+        centrality = nx.katz_centrality(g)
+
+    elif centrality_measure == "hits":
+        hubs, authorities = nx.hits(g)
+        centrality = authorities
+
+    else:
+        raise ValueError(f"Unknown centrality measure: '{centrality_measure}'")
+
+    user_nodes = {user_id: centrality.get(node, 0.0) for node, user_id in user_id_map.items()}
+    return user_nodes
+
+
+def evaluate_centrality(centrality_scores, data, mask, connectivity_bound=20):
+    report = {}
+    mask_indices = mask.squeeze().nonzero().cpu().flatten().tolist()
+    ground_truth = data[data.target_type].y[mask.squeeze().bool()].cpu().numpy()
+    preds_raw = numpy.array([centrality_scores.get(idx, 0.0) for idx in mask_indices])
+    preds_norm = (preds_raw - preds_raw.min()) / (preds_raw.max() - preds_raw.min())
+
+    def compute_metrics(true, pred):
+        mae = mean_absolute_error(true, pred)
+        mse = mean_squared_error(true, pred)
+        rmse = numpy.sqrt(mse)
+        r2 = r2_score(true, pred)
+        return {"mae": mae, "mse": mse, "rmse": rmse, "r2": r2}
+
+    report["regression_metrics"] = compute_metrics(ground_truth, preds_norm)
+
+    if connectivity_bound > 0:
+        all_sorted_indices = sorted(centrality_scores.keys(), key=lambda x: centrality_scores[x], reverse=True)
+        con_values = compute_incremental_con_measure(all_sorted_indices, connectivity_bound, data, False)
+        report["con_measures"] = {"values": con_values}
+
+    return report

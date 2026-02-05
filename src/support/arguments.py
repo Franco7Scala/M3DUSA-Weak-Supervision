@@ -21,6 +21,7 @@ def parse_arguments():
     parser.add_argument("--hidden-channels", type=int, default=16, help="Number of hidden channels.")
     parser.add_argument("--dropout", type=float, default=0.3, help="Dropout rate.")
     parser.add_argument("--num-layers", type=int, default=3, help="Number of layers in the model.")
+    parser.add_argument("--centrality-measure", type=str, default="pagerank", help="Centrality measure to use for comparison (e.g., 'degree', 'pagerank', 'betweenness', 'closeness', 'eigenvector').")
 
     # Data parameters
     parser.add_argument("--influence-levels", type=int, default=5, help="Number of influence levels (e.g., low, medium, high).")
