@@ -38,7 +38,6 @@ if __name__ == "__main__":
     layer_probs = compute_layer_probabilities(layer_graphs, args.beta)
 
     # influence scores computation
-    descending_order = False
     ic_scores = compute_influence_scores(layer_graphs=layer_graphs, layer_probs=layer_probs, num_steps=args.num_steps, n_sim=args.n_sim, seed=args.seed, descending_order=args.descending_order, out_dir=results_dir)
     proxy_scores = compute_ic_like_influence_scores(layer_graphs, layer_probs, normalize=False)
     save_influence_to_json(proxy_scores, os.path.join(results_dir, f"influence_scores_IC_proxy.json"))
