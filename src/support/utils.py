@@ -235,18 +235,18 @@ def print_data_analysys(data):
     print("Maximum:", data.max().item())
 
 
-def print_ranking_comparison(real_scores, predicted_scores):
-    real_scores = real_scores.flatten()
-    predicted_scores = predicted_scores.flatten()
-    real_scores_sorted = torch.argsort(real_scores).cpu().tolist()
-    predicted_scores_sorted = torch.argsort(predicted_scores).cpu().tolist()
-    real_scores = real_scores.cpu().tolist()
-    predicted_scores = predicted_scores.cpu().tolist()
-    cprint(f"Spearman's rho: {spearmanr(real_scores, predicted_scores)[0]}", Color.EXPERIMENT_OUTPUT)
-    cprint(f"Kendall's tau: {kendalltau(real_scores, predicted_scores)[0]}", Color.EXPERIMENT_OUTPUT)
-    cprint(f"Jaccard Index @100: {jaccard_index(real_scores_sorted, predicted_scores_sorted, 100)}", Color.EXPERIMENT_OUTPUT)
-    cprint(f"Precision@100: {precision_at_k(real_scores_sorted, predicted_scores_sorted, 100)}", Color.EXPERIMENT_OUTPUT)
-    cprint(f"NDCG@100: {ndcg(real_scores_sorted, predicted_scores_sorted, 100)}", Color.EXPERIMENT_OUTPUT)
+def print_ranking_comparison(ranking_a, ranking_b):
+    ranking_a_sorted_indexes = torch.tensor(sorted(ranking_a.keys(), key=lambda x: ranking_a[x], reverse=True)).flatten().cpu().tolist()
+    ranking_b_sorted_indexes = torch.tensor(sorted(ranking_b.keys(), key=lambda x: ranking_b[x], reverse=True)).flatten().cpu().tolist()
+    ranking_a = [ranking_a[x] for x in ranking_a.keys()]
+    ranking_b = [ranking_b[x] for x in ranking_b.keys()]
+    cprint(f"Spearman's rho: {spearmanr(ranking_a, ranking_b)[0]}", Color.EXPERIMENT_OUTPUT)
+    cprint(f"Kendall's tau: {kendalltau(ranking_a, ranking_b)[0]}", Color.EXPERIMENT_OUTPUT)
+    for value in [100, 250, 500]:
+        cprint("-" * 30, Color.EXPERIMENT_OUTPUT)
+        cprint(f"Jaccard Index @{value}: {jaccard_index(ranking_a_sorted_indexes, ranking_b_sorted_indexes, value)}", Color.EXPERIMENT_OUTPUT)
+        cprint(f"Precision@{value}: {precision_at_k(ranking_a_sorted_indexes, ranking_b_sorted_indexes, value)}", Color.EXPERIMENT_OUTPUT)
+        cprint(f"NDCG@{value}: {ndcg(ranking_a_sorted_indexes, ranking_b_sorted_indexes, value)}", Color.EXPERIMENT_OUTPUT)
 
 
 def plot_data_distribution(values, label):
@@ -358,21 +358,27 @@ def get_topk_centrality_nodes(g, user_id_map, centrality_measure):
         centrality = nx.katz_centrality(g)
 
     elif centrality_measure == "hits":
-        hubs, authorities = nx.hits(g)
-        centrality = authorities
+        _, centrality = nx.hits(g)
 
     else:
         raise ValueError(f"Unknown centrality measure: '{centrality_measure}'")
 
-    user_nodes = {user_id: centrality.get(node, 0.0) for node, user_id in user_id_map.items()}
+    user_nodes = {user_id: centrality[node] for node, user_id in user_id_map.items()}
     return user_nodes
 
 
-def evaluate_centrality(centrality_scores, data, mask, connectivity_bound=20):
+def evaluate_centrality_measure(centrality_scores, data, mask=None, connectivity_bound=20):
     report = {}
-    mask_indices = mask.squeeze().nonzero().cpu().flatten().tolist()
-    ground_truth = data[data.target_type].y[mask.squeeze().bool()].cpu().numpy()
-    preds_raw = numpy.array([centrality_scores.get(idx, 0.0) for idx in mask_indices])
+    if mask is None:
+        ground_truth = data[data.target_type].y.cpu().numpy()
+        preds_raw = numpy.array([centrality_scores[idx] for idx in centrality_scores.keys()])
+
+    else:
+        mask_indices = mask.squeeze().nonzero().cpu().flatten().tolist()
+        ground_truth = data[data.target_type].y[mask.squeeze().bool()].cpu().numpy()
+        preds_raw = numpy.array([centrality_scores[idx] for idx in mask_indices])
+
+    ground_truth_norm = (ground_truth - ground_truth.min()) / (ground_truth.max() - ground_truth.min())
     preds_norm = (preds_raw - preds_raw.min()) / (preds_raw.max() - preds_raw.min())
 
     def compute_metrics(true, pred):
@@ -382,7 +388,7 @@ def evaluate_centrality(centrality_scores, data, mask, connectivity_bound=20):
         r2 = r2_score(true, pred)
         return {"mae": mae, "mse": mse, "rmse": rmse, "r2": r2}
 
-    report["regression_metrics"] = compute_metrics(ground_truth, preds_norm)
+    report["regression_metrics"] = compute_metrics(ground_truth_norm, preds_norm)
 
     if connectivity_bound > 0:
         all_sorted_indices = sorted(centrality_scores.keys(), key=lambda x: centrality_scores[x], reverse=True)

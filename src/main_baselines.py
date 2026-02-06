@@ -1,20 +1,8 @@
-import sys
 import warnings
-import networkx as nx
 
-from src.active_learning.al_techniques.margin_al_technique import MarginALTechnique
-from src.active_learning.al_techniques.entropy_al_technique import EntropyALTechnique
-from src.active_learning.al_techniques.lcs_al_technique import LCSALTechnique
-from src.active_learning.al_techniques.random_al_technique import RandomALTechnique
-from src.active_learning.node_sampler import ActiveLearningSampler
-from src.models.gat.losses.nc_loss import NCLoss
-from src.models.gat.trainer import train, evaluate
 from src.dataset.dataset_loader import load_dataset
 from src.influence.proxy.IC_proxy import compute_ic_like_influence_scores
-from src.influence.influence_groups import compare_scores_and_return_groups
 from src.models.gat.hetero_gat import HeteroGAT
-from src.models.gat.losses.mixed_loss import MixedLoss
-from src.models.gat.losses.mae_loss import MAELoss
 from src.influence.simulation.influence_score_ic import compute_influence_scores
 from src.support.arguments import parse_arguments
 from src.support.utils import *
@@ -32,7 +20,7 @@ if __name__ == "__main__":
     results_dir = os.path.join(get_base_dir(), args.dataset_name, "influential_nodes", "results")
     cprint(f"Saving experiment results in: '{results_dir}'", Color.EXPERIMENT_CONFIG_INFO)
     os.makedirs(results_dir, exist_ok=True)
-    device = "cpu"#get_device()
+    device = "cpu"
     data = load_dataset(args.dataset_name, reduction_factor=args.reduction_factor, k=args.num_hops, device=device)
     layer_graphs = build_metapath_graphs(data)
     layer_probs = compute_layer_probabilities(layer_graphs, args.beta)
@@ -74,48 +62,36 @@ if __name__ == "__main__":
     ordered_ic_scores = [ic_scores[k] for k in sorted(ic_scores.keys())]
     data[data.target_type].y = torch.tensor(ordered_ic_scores)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
     cprint("Building NetworkX graph for centrality analysis...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
-    g_total = nx.Graph()
     g_total = to_networkx(data.to_homogeneous(), to_undirected=True)
-
     cprint(f"Graph built successfully: {g_total.number_of_nodes()} nodes, {g_total.number_of_edges()} edges.", Color.EXPERIMENT_CONFIG_INFO)
-    num_nodes = data[data.target_type].num_nodes
-    user_id_map = {i: i for i in range(num_nodes)}
+    user_id_map = {}
+    current_offset = 0
+    cprint(f"Calculating index mapping for target type: '{data.target_type}'...", Color.EXPERIMENT_STATUS_LOW_PRIORITY)
+    for node_type in data.node_types:
+        num_nodes_in_type = data[node_type].num_nodes
+        if node_type == data.target_type:
+            user_id_map = {current_offset + i: i for i in range(num_nodes_in_type)}
+            break
 
-    cprint(f"Processing {args.centrality_measure}...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
-    centrality_scores_dict = get_topk_centrality_nodes(g_total, user_id_map, centrality_measure=args.centrality_measure)
-    cent_values_list = [centrality_scores_dict.get(i, 0.0) for i in range(num_nodes)]
-    cent_values_tensor = torch.tensor(cent_values_list)
+        current_offset += num_nodes_in_type
 
     test_indices = test_mask.squeeze().nonzero().flatten().tolist()
-
-    # Ground Truth
+    cprint(f"Processing {args.centrality_measure}...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
+    centrality_scores_dict = get_topk_centrality_nodes(g_total, user_id_map, centrality_measure=args.centrality_measure)
     y_real_list = [ic_scores[i] for i in test_indices]
-    # Prediction
-    y_pred_list = [centrality_scores_dict.get(i, 0.0) for i in test_indices]
-
-    report = evaluate_centrality(centrality_scores_dict, data, test_mask)
+    y_pred_list = [centrality_scores_dict[i] for i in test_indices]
     cprint("Final evaluation on test set with connectivity computation...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
+    report = evaluate_centrality_measure(centrality_scores_dict, data, connectivity_bound=args.connectivity_evaluation_bound)
     print_metrics(report)
-    cprint("Comparing ranking with IC model...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
-    y_real_tensor = torch.tensor(y_real_list, dtype=torch.float32)
-    y_pred_tensor = torch.tensor(y_pred_list, dtype=torch.float32)
-    print_ranking_comparison(y_real_tensor, y_pred_tensor)
+    cprint(f"Comparing {args.centrality_measure} with IC model...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
+    y_real = {test_indices[i]: y_real_list[i] for i in range(len(test_indices))}
+    y_pred = {test_indices[i]: y_pred_list[i] for i in range(len(test_indices))}
+    print_ranking_comparison(y_real, y_pred)
 
     if args.show_plots:
+        y_real_tensor = torch.tensor(y_real_list, dtype=torch.float32)
+        y_pred_tensor = torch.tensor(y_pred_list, dtype=torch.float32)
         plot_ranking_comparison(y_real_tensor, y_pred_tensor, ("IC Scores", f"Centrality {args.centrality_measure}"))
 
-cprint("Comparison completed!", Color.OTHER)
+cprint("Completed!", Color.OTHER)

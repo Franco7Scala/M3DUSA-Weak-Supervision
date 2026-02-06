@@ -59,7 +59,9 @@ def evaluate(model, data, mask, connectivity_bound=20):
         report["proxy_regression_head"] = compute_regression_metrics(ground_truth, pred)
         # Connectivity measures
         if connectivity_bound > 0:
-            indices = torch.argsort(out_ic_regression_full[data.target_type].squeeze(), descending=False).cpu().squeeze().tolist()
-            report["con_measures"] = {"values": compute_incremental_con_measure(indices, connectivity_bound, data, False)}
+            indices = torch.argsort(out_ic_regression_full[data.target_type].squeeze(), descending=True).cpu().squeeze().tolist()
+            report["ic_con_measures_head"] = {"values": compute_incremental_con_measure(indices, connectivity_bound, data, False)}
+            indices = torch.argsort(out_proxy_regression_full[data.target_type].squeeze(), descending=True).cpu().squeeze().tolist()
+            report["proxy_con_measures_head"] = {"values": compute_incremental_con_measure(indices, connectivity_bound, data, False)}
 
         return report

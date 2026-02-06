@@ -141,7 +141,7 @@ def create_nodes_dict_empty(data):
     return res
 
 
-def k_hop_subgraph(data, seeds_mask, k):
+def k_hop_subgraph(data, seeds_mask, k, strict=True):
     subgraph_mask = create_nodes_dict_empty(data)
     for edge_type in data.edge_types:
         src_type, _, dst_type = edge_type
@@ -157,7 +157,7 @@ def k_hop_subgraph(data, seeds_mask, k):
 
     #TODO add meta paths for heterogeneous graphs
     subgraph_mask[data.target_type] = seeds_mask.tolist()
-    subgraph_mask = _merge_masks(subgraph_mask, _hop_traveling(data, subgraph_mask, k-1))
+    subgraph_mask = _merge_masks(subgraph_mask, _hop_traveling(data, subgraph_mask, strict, k-1))
     for ntype in subgraph_mask.keys():
         subgraph_mask[ntype] = torch.tensor(subgraph_mask[ntype]).to(data.device)
 
@@ -165,7 +165,7 @@ def k_hop_subgraph(data, seeds_mask, k):
     return subgraph_data, subgraph_mask
 
 
-def _hop_traveling(data, subgraph_mask, k):
+def _hop_traveling(data, subgraph_mask, strict, k):
     if k == 0:
         return subgraph_mask
 
@@ -175,17 +175,17 @@ def _hop_traveling(data, subgraph_mask, k):
         for node_type in subgraph_mask.keys():
             if node_type != data.target_type:
                 prevoius_hop_nodes = subgraph_mask[node_type]
-                if dst_type == node_type and src_type != data.target_type:
+                if dst_type == node_type and (src_type != data.target_type or not strict):
                     for idx, node in enumerate(data[edge_type]["edge_index"][1]):
                         if node.item() in prevoius_hop_nodes:
                             next_hop_subgraph_mask[src_type].append(data[edge_type]["edge_index"][0][idx].item())
 
-                if src_type == node_type and dst_type != data.target_type:
+                if src_type == node_type and (dst_type != data.target_type or not strict):
                     for idx, node in enumerate(data[edge_type]["edge_index"][0]):
                         if node.item() in prevoius_hop_nodes:
                             next_hop_subgraph_mask[dst_type].append(data[edge_type]["edge_index"][1][idx].item())
 
-    return _hop_traveling(data, next_hop_subgraph_mask, k-1)
+    return _hop_traveling(data, next_hop_subgraph_mask, strict, k-1)
 
 
 def _merge_masks(first_mask, second_mask):
@@ -234,11 +234,10 @@ def count_connected_components(data, directed):
     return len(find_connected_components(data, directed))
 
 
-def compute_con_measure(data, directed):
+def compute_con_measure(data, directed, original_number_of_nodes):
     g = to_networkx(data.to_homogeneous(), to_undirected=not directed)
     size_largest_connected_component = [len(c) for c in sorted(nx.connected_components(g), key=len, reverse=True)][0]
-    number_of_nodes = g.number_of_nodes()
-    return size_largest_connected_component / number_of_nodes
+    return size_largest_connected_component / original_number_of_nodes
 
 
 def compute_incremental_con_measure(set_of_nodes, n_to_remove, data, directed):
@@ -250,7 +249,7 @@ def compute_incremental_con_measure(set_of_nodes, n_to_remove, data, directed):
         mask = torch.ones(size).to(int)
         mask[node_set] = 0
         mask = mask.nonzero().squeeze()
-        sub_data = k_hop_subgraph(data, mask, 2)
-        con_measures.append(compute_con_measure(sub_data[0], directed))
+        sub_data = k_hop_subgraph(data, mask, 2, strict=True)
+        con_measures.append(compute_con_measure(sub_data[0], directed, data.num_nodes))
 
     return con_measures

@@ -48,6 +48,9 @@ if __name__ == "__main__":
     if args.show_plots:
         plot_ranking_comparison(torch.tensor(list(ic_scores.values())), torch.tensor(list(proxy_scores.values())), ("IC scores", "Proxy scores"))
 
+    cprint("Comparing rankings: IC vs proxy...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
+    print_ranking_comparison(ic_scores, proxy_scores)
+
     # training procedure
     cprint("Building model...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
     model = HeteroGAT(metadata=data.metadata(), target_type=data.target_type, hidden_channels=args.hidden_channels, out_channels=args.influence_levels, dropout=args.dropout, num_layers=args.num_layers).to(device)
@@ -124,11 +127,27 @@ if __name__ == "__main__":
     cprint(f"Saving model in '{results_dir}/hetero_gat_model_final.ckpt'...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
     torch.save(model.state_dict(), f"{results_dir}/hetero_gat_model_final.ckpt")
 
-    report = evaluate(model, data, test_mask, 20)
     cprint("Final evaluation on test set with connectivity computation...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
+    report = evaluate(model, data, test_mask, args.connectivity_evaluation_bound)
+
+    all_sorted_indices = sorted(ic_scores.keys(), key=lambda x: ic_scores[x], reverse=True)
+    ic_con_values = compute_incremental_con_measure(all_sorted_indices, args.connectivity_evaluation_bound, data, False)
+    report["ic_con_measures"] = {"values": ic_con_values}
+    all_sorted_indices = sorted(proxy_scores.keys(), key=lambda x: proxy_scores[x], reverse=True)
+    proxy_con_values = compute_incremental_con_measure(all_sorted_indices, args.connectivity_evaluation_bound, data, False)
+    report["proxy_con_measures"] = {"values": proxy_con_values}
     print_metrics(report)
+
     cprint("Comparing ranking with IC model...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
-    print_ranking_comparison(data[data.target_type].y[1][test_mask.squeeze().bool()], model(data.x_dict, data.edge_index_dict)[1][data.target_type][test_mask.squeeze().bool()])
+    mask = test_mask.squeeze().bool()
+    out_model = model(data.x_dict, data.edge_index_dict)
+    ic_test_values = {idx.item(): val.item() for idx, val in zip(mask.nonzero().flatten(), data[data.target_type].y[1][mask])}
+    model_test_values = {idx.item(): val.item() for idx, val in zip(mask.nonzero().flatten(), out_model[1][data.target_type][mask])}
+    print_ranking_comparison(ic_test_values, model_test_values)
+    cprint("Comparing ranking with proxy score...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
+    proxy_test_values = {idx.item(): val.item() for idx, val in zip(mask.nonzero().flatten(), data[data.target_type].y[2][mask])}
+    model_test_values = {idx.item(): val.item() for idx, val in zip(mask.nonzero().flatten(), out_model[2][data.target_type][mask])}
+    print_ranking_comparison(proxy_test_values, model_test_values)
 
     if args.show_plots:
         plot_ranking_comparison(data[data.target_type].y[1][test_mask.squeeze().bool()], model(data.x_dict, data.edge_index_dict)[1][data.target_type][test_mask.squeeze().bool()], ("IC scores real", "IC scores predicted"))
