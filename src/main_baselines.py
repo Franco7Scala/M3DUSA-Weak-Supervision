@@ -78,7 +78,10 @@ if __name__ == "__main__":
 
     test_indices = test_mask.squeeze().nonzero().flatten().tolist()
     cprint(f"Processing {args.centrality_measure}...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
-    centrality_scores_dict = get_topk_centrality_nodes(g_total, user_id_map, centrality_measure=args.centrality_measure)
+    #centrality_scores_dict = get_topk_centrality_nodes(g_total, user_id_map, centrality_measure=args.centrality_measure)
+
+    #variante multilayer
+    centrality_scores_dict = get_topk_centrality_nodes_multilayer(layer_graphs, layer_probs, user_id_map, centrality_measure=args.centrality_measure, normalization="l1")
     y_real_list = [ic_scores[i] for i in test_indices]
     y_pred_list = [centrality_scores_dict[i] for i in test_indices]
     cprint("Final evaluation on test set with connectivity computation...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
