@@ -4,7 +4,7 @@ import numpy
 from sklearn.metrics import f1_score, precision_score, recall_score, mean_absolute_error, mean_squared_error, r2_score
 from tqdm import tqdm
 from src.support.utils import compute_auc
-from src.support.utils_graph import compute_incremental_con_measure
+from src.support.utils_graph import compute_incremental_con_measure, compute_incremental_coverage, compute_incremental_reachability, compute_con_measure, k_hop_subgraph
 
 
 def train(model, data, optimizer, criterion, train_mask, scheduler=None, n_epochs=200):
@@ -58,10 +58,26 @@ def evaluate(model, data, mask, connectivity_bound=20):
         pred = out_proxy_regression.cpu().numpy()
         report["proxy_regression_head"] = compute_regression_metrics(ground_truth, pred)
         # Connectivity measures
+        size = data[data.target_type].x.shape[0]
+        node_set = torch.argsort(out_ic_regression_full[data.target_type].squeeze(), descending=True).cpu().squeeze().tolist()[:300]
+        mask = torch.ones(size).to(int)
+        mask[node_set] = 0
+        mask = mask.nonzero().squeeze()
+        sub_data = k_hop_subgraph(data, mask, 2, strict=True)
+        report["ic_con_measures_head@300"] = {"value": compute_con_measure(sub_data[0], False, data.num_nodes)}
+
         if connectivity_bound > 0:
             indices = torch.argsort(out_ic_regression_full[data.target_type].squeeze(), descending=True).cpu().squeeze().tolist()
             report["ic_con_measures_head"] = {"values": compute_incremental_con_measure(indices, connectivity_bound, data, False)}
+            coverage = compute_incremental_coverage(indices, connectivity_bound, data)
+            report["ic_coverage_head"] = {"values": coverage}
+            reachability = compute_incremental_reachability(indices, connectivity_bound, data)
+            report["ic_reachability_head"] = {"values": reachability}
             indices = torch.argsort(out_proxy_regression_full[data.target_type].squeeze(), descending=True).cpu().squeeze().tolist()
             report["proxy_con_measures_head"] = {"values": compute_incremental_con_measure(indices, connectivity_bound, data, False)}
+            coverage = compute_incremental_coverage(indices, connectivity_bound, data)
+            report["proxy_coverage_head"] = {"values": coverage}
+            reachability = compute_incremental_reachability(indices, connectivity_bound, data)
+            report["proxy_reachability_head"] = {"values": reachability}
 
         return report

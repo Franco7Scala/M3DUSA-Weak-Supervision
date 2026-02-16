@@ -4,7 +4,7 @@ import torch
 from torch_geometric.data import HeteroData
 from torch_geometric.utils import to_networkx
 from collections import defaultdict
-
+from src.support.ranking_metrics import coverage, reachability
 
 """
 Constructs weighted homogeneous graphs for each metapath and edge that starts and ends in data.target_type.
@@ -253,3 +253,21 @@ def compute_incremental_con_measure(set_of_nodes, n_to_remove, data, directed):
         con_measures.append(compute_con_measure(sub_data[0], directed, data.num_nodes))
 
     return con_measures
+
+
+def _compute_incremental_measure(set_of_nodes, n_to_remove, data, measure):
+    coverage_measures = []
+    step = len(set_of_nodes) // n_to_remove
+    for i in range(step, (len(set_of_nodes) - step), step):
+        node_set = set_of_nodes[:i]
+        coverage_measures.append(measure(data, node_set))
+
+    return coverage_measures
+
+
+def compute_incremental_coverage(set_of_nodes, n_to_remove, data):
+    return _compute_incremental_measure(set_of_nodes, n_to_remove, data, lambda d, s: coverage(d, s))
+
+
+def compute_incremental_reachability(set_of_nodes, n_to_remove, data):
+    return _compute_incremental_measure(set_of_nodes, n_to_remove, data, lambda d, s: reachability(d, s))

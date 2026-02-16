@@ -17,8 +17,9 @@ from sklearn.decomposition import PCA
 from torch_geometric.data import HeteroData
 from torch_geometric.utils import dropout_edge
 from scipy.stats import spearmanr, kendalltau
-from src.support.ranking_comparison import jaccard_index, precision_at_k, ndcg
-from src.support.utils_graph import compute_incremental_con_measure
+from torch_geometric.utils.convert import to_networkx
+from src.support.ranking_metrics import jaccard_index, precision_at_k, ndcg
+from src.support.utils_graph import compute_incremental_con_measure, compute_incremental_coverage, compute_incremental_reachability, k_hop_subgraph, compute_con_measure
 
 
 class Color(Enum):
@@ -367,6 +368,25 @@ def get_topk_centrality_nodes(g, user_id_map, centrality_measure):
     return user_nodes
 
 
+def compute_centrality_measure(data, centrality_measure):
+    cprint("Building NetworkX graph for centrality analysis...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
+    g_total = to_networkx(data.to_homogeneous(), to_undirected=True)
+    cprint(f"Graph built successfully: {g_total.number_of_nodes()} nodes, {g_total.number_of_edges()} edges.", Color.EXPERIMENT_CONFIG_INFO)
+    user_id_map = {}
+    current_offset = 0
+    cprint(f"Calculating index mapping for target type: '{data.target_type}'...", Color.EXPERIMENT_STATUS_LOW_PRIORITY)
+    for node_type in data.node_types:
+        num_nodes_in_type = data[node_type].num_nodes
+        if node_type == data.target_type:
+            user_id_map = {current_offset + i: i for i in range(num_nodes_in_type)}
+            break
+
+        current_offset += num_nodes_in_type
+
+    cprint(f"Processing {centrality_measure}...", Color.EXPERIMENT_STATUS_HIGH_PRIORITY)
+    return get_topk_centrality_nodes(g_total, user_id_map, centrality_measure=centrality_measure)
+
+
 def evaluate_centrality_measure(centrality_scores, data, mask=None, connectivity_bound=20):
     report = {}
     if mask is None:
@@ -390,9 +410,21 @@ def evaluate_centrality_measure(centrality_scores, data, mask=None, connectivity
 
     report["regression_metrics"] = compute_metrics(ground_truth_norm, preds_norm)
 
+    size = data[data.target_type].x.shape[0]
+    node_set = sorted(centrality_scores.keys(), key=lambda x: centrality_scores[x], reverse=True)[:300]
+    mask = torch.ones(size).to(int)
+    mask[node_set] = 0
+    mask = mask.nonzero().squeeze()
+    sub_data = k_hop_subgraph(data, mask, 2, strict=True)
+    report["ic_con_measures_head@300"] = {"value": compute_con_measure(sub_data[0], False, data.num_nodes)}
+
     if connectivity_bound > 0:
         all_sorted_indices = sorted(centrality_scores.keys(), key=lambda x: centrality_scores[x], reverse=True)
         con_values = compute_incremental_con_measure(all_sorted_indices, connectivity_bound, data, False)
         report["con_measures"] = {"values": con_values}
+        coverage = compute_incremental_coverage(all_sorted_indices, connectivity_bound, data)
+        report["coverage"] = {"values": coverage}
+        reachability = compute_incremental_reachability(all_sorted_indices, connectivity_bound, data)
+        report["reachability"] = {"values": reachability}
 
     return report

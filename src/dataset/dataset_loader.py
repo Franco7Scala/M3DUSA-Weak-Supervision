@@ -15,7 +15,7 @@ def load_dataset(dataset_name, reduction_factor, k, device):
     snapshot_masks = []
 
     if dataset_name.lower() == "imdb".lower():
-        target_type = "actor"
+        target_type = "movie"
         dataset = IMDB(path)
         data = dataset.data
 
@@ -72,12 +72,10 @@ def load_dataset(dataset_name, reduction_factor, k, device):
 
 def _get_metapaths(dataset_name):
     if dataset_name.lower() == "imdb":
-        metapaths = [[('actor', 'to', 'movie'),
-                      ('movie', 'to', 'actor')], # AMA
-                     [('actor', 'to', 'movie'),
-                     ('movie', 'to', 'director'),
-                      ('director', 'to', 'movie'),
-                      ('movie', 'to', 'actor')]] #AMDMA
+        metapaths = [[('movie', 'to', 'actor'),
+                      ('actor', 'to', 'movie')], # AMA
+                     [('movie', 'to', 'director'),
+                      ('director', 'to', 'movie')]] #AMDMA
 
     elif dataset_name.lower() == "aminer":
         metapaths = [[('author', 'writes', 'paper'),
