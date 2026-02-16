@@ -1,4 +1,6 @@
 import os
+from collections import defaultdict
+
 import torch
 import csv
 import json
@@ -37,9 +39,9 @@ def get_device():
 
 
 def get_base_dir():
-    return "/home/jovyan/projects/InfluentialNodes/dataset/"
+    #return "/home/jovyan/projects/InfluentialNodes/dataset/"
     #return "/home/scala/projects/InfluentialNodes/dataset/"
-    #return "/home/martirano/data"
+    return "/home/martirano/data"
 
 
 def get_time_in_millis():
@@ -365,6 +367,69 @@ def get_topk_centrality_nodes(g, user_id_map, centrality_measure):
         raise ValueError(f"Unknown centrality measure: '{centrality_measure}'")
 
     user_nodes = {user_id: centrality[node] for node, user_id in user_id_map.items()}
+    return user_nodes
+
+
+#normalization: max to reserve ranking shape, l1 Makes total layer contribution = 1 and prevents large/dense layers from dominating
+def get_topk_centrality_nodes_multilayer(layer_graphs, layer_importance, user_id_map, centrality_measure, normalization="l1"):  # options: None, "max", "l1")
+
+    aggregated_centrality = defaultdict(float)
+
+    for layer_name, g in layer_graphs.items():
+        weight = layer_importance[layer_name]
+
+        # Compute centrality
+        if centrality_measure == "degree":
+            centrality = nx.degree_centrality(g)
+
+        elif centrality_measure == "closeness":
+            centrality = nx.closeness_centrality(g)
+
+        elif centrality_measure == "betweenness":
+            centrality = nx.betweenness_centrality(g)
+
+        elif centrality_measure == "eigenvector":
+            centrality = nx.eigenvector_centrality(g, max_iter=500)
+
+        elif centrality_measure == "pagerank":
+            centrality = nx.pagerank(g)
+
+        elif centrality_measure == "katz":
+            centrality = nx.katz_centrality(g)
+
+        elif centrality_measure == "hits":
+            _, centrality = nx.hits(g)
+
+        else:
+            raise ValueError(f"Unknown centrality measure: '{centrality_measure}'")
+
+        # Normalize per layer
+        if normalization == "max":
+            max_val = max(centrality.values(), default=0)
+            if max_val > 0:
+                centrality = {n: v / max_val for n, v in centrality.items()}
+
+        elif normalization == "l1":
+            total = sum(centrality.values())
+            if total > 0:
+                centrality = {n: v / total for n, v in centrality.items()}
+
+        elif normalization is None:
+            pass
+
+        else:
+            raise ValueError("normalization must be one of: None, 'max', 'l1'")
+
+        # Weighted aggregation
+        for node, value in centrality.items():
+            aggregated_centrality[node] += weight * value
+
+    # Map to user IDs
+    user_nodes = {
+        user_id: aggregated_centrality.get(node, 0.0)
+        for node, user_id in user_id_map.items()
+    }
+
     return user_nodes
 
 
