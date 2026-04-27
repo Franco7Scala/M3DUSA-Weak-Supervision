@@ -1,16 +1,15 @@
 import sys
-import torch
 import warnings
 
 from src._trash.active_learning.node_sampler import ActiveLearningSampler
-from src._trash.models.gat.losses.nc_loss import NCLoss
+from src.mixed_loss.nc_loss import NCLoss
 from src._trash.models.gat.trainer import train, evaluate
 from src._trash.dataset.dataset_loader import load_dataset
 from src._trash.influence.proxy.IC_proxy import compute_ic_like_influence_scores
 from src._trash.influence.influence_groups import compare_scores_and_return_groups
 from src._trash.models.gat.hetero_gat import HeteroGAT
-from src._trash.models.gat.losses.mixed_loss import MixedLoss
-from src._trash.models.gat.losses.mae_loss import MAELoss
+from src.mixed_loss.mixed_loss import MixedLoss
+from src.mixed_loss.mae_loss import MAELoss
 from src._trash.support.arguments import parse_arguments
 from src._trash.support.utils import *
 from src._trash.support.utils_graph import build_metapath_graphs, compute_layer_probabilities
@@ -51,7 +50,7 @@ if __name__ == "__main__":
     model = HeteroGAT(metadata=data.metadata(), target_type=data.target_type, hidden_channels=args.hidden_channels, out_channels=args.influence_levels, dropout=args.dropout, num_layers=args.num_layers).to(device)
     node_sampler = ActiveLearningSampler(al_technique(model), args.k)
     if args.loss == "mixed_loss":
-        criterion = MixedLoss(weight_ic_classification=args.weight_ic_classification, weight_ic_regression=args.weight_ic_regression, weight_proxy_regression=args.weight_proxy_regression, weight_consistency=args.weight_consistency)
+        criterion = MixedLoss(weight_ic_classification=args.weight_ic_classification, weight_proxy_component=args.weight_ic_regression, weight_proxy_regression=args.weight_proxy_regression, weight_consistency=args.weight_consistency)
 
     elif args.loss == "mae":
         criterion = MAELoss()

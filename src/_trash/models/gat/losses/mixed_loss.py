@@ -2,7 +2,7 @@ import torch
 
 from torch import nn
 from torch.nn import functional as F
-from src._trash.models.gat.losses.consistency_loss import ConsistencyLoss
+from src.mixed_loss.binary_consistency_loss import BinaryConsistencyLoss
 
 
 class MixedLoss(nn.Module):
@@ -13,7 +13,7 @@ class MixedLoss(nn.Module):
         self.weight_ic_regression = weight_ic_regression
         self.weight_proxy_regression = weight_proxy_regression
         self.weight_consistency = weight_consistency
-        self.consistency_loss = ConsistencyLoss()
+        self.consistency_loss = BinaryConsistencyLoss()
 
     def forward(self, output, target, mask=None):
         if mask is not None:
