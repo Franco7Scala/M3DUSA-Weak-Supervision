@@ -1,74 +1,92 @@
 import os
-import sys
+import argparse
 import torch
 import pandas as pd
 from torch_geometric.nn import to_hetero
 import torch.nn as nn
 import time
 
-from src.dataset_loader import build_heterodata
+from src.dataset_loader import get_target_type, build_heterodata
 from src.models.GAT import GAT
 from src.training.trainer_ES import train_node_classifier, eval_node_classifier
 from src.utils import compute_weights, get_device, set_random_seed
-from src._trash.m3dusa_old.utils_datasets import get_target_type, load_dataset
 
 
-#"$dataset_name" "$mode" "$seed_index" "$seed" "$embeddings_dir" "$models_dir" "$results_dir" "$losses_dir"
 if __name__ == "__main__":
 
-    dataset_name = sys.argv[1]
-    split = sys.argv[2]
-    mode = sys.argv[3]
-    run = int(sys.argv[4]) #seed_index
-    seed = int(sys.argv[5])
-    embeddings_dir = sys.argv[6]
-    models_dir = sys.argv[7]
-    results_dir = sys.argv[8]
-    losses_dir = sys.argv[9]
+    parser = argparse.ArgumentParser(description="Run M3DUSA_active experiment")
+
+    parser.add_argument("--dataset_name", type=str, default="politifact",
+                        help="Name of the dataset (e.g., politifact)")
+    parser.add_argument("--seed", type=int, default=42,
+                        help="Random seed for training")
+    parser.add_argument("--num_layers", type=int, default=3,
+                        help="Number of GAT layers")
+    parser.add_argument("--hidden_channels", type=int, default=128,
+                        help="Size of hidden channels")
+    parser.add_argument("--dropout", type=float, default=0.3,
+                        help="Dropout probability")
+    parser.add_argument("--learning_rate", type=float, default=0.005,
+                        help="Learning rate")
+    parser.add_argument("--results_dir", type=str, default=os.path.join(os.getcwd(), "results"),
+                        help="Path (directory) to store results")
+    parser.add_argument("--embs_dir", type=str, default=os.path.join(os.getcwd(), "embeddings"),
+                        help="Path (directory) to store embeddings")
+
+    args = parser.parse_args()
+
+    dataset_name = args.dataset_name
+    seed = args.seed
+    num_layers = args.num_layers
+    hidden_channels = args.hidden_channels
+    dropout = args.dropout
+    lr = args.learning_rate
+    results_dir = args.results_dir
+    embeddings_dir = args.embs_dir
 
     set_random_seed(seed)
 
     # LOAD THE DATASET
     target_type = get_target_type(dataset_name)
-    data = build_heterodata(dataset_name)
+    data = build_heterodata(dataset_name, target_type)
 
     # SET THE MODEL
     # model = None
-    model = GAT(hidden_channels=64, out_channels=2, dropout=0.3, num_layers=3) #2 for politifact
+    model = GAT(hidden_channels=hidden_channels, dropout=dropout, num_layers=num_layers, out_channels=2) #num layers 3 per mumin, 2 per politifact
     model = to_hetero(model, data.metadata(), aggr='sum')
 
     device = torch.device(get_device() if torch.cuda.is_available() else 'cpu')
     data, model = data.to(device), model.to(device)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=5e-3)  # lr=0.005
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-3)
     targets = data[target_type].y
     weights = compute_weights(targets).float().to(device)
     criterion = nn.CrossEntropyLoss(weights)
 
     # TRAIN THE MODEL
     start_time = time.time()
-    model = train_node_classifier(model, data, optimizer, criterion, seed, target_type, embeddings_dir, losses_dir, mode, n_epochs=1000, patience=100, epsilon=1e-6)
+    model = train_node_classifier(model, data, optimizer, criterion, seed, target_type, embeddings_dir, n_epochs=1000, patience=100, epsilon=1e-6)
     end_time = time.time()
 
     training_time = end_time - start_time
     print(f'Training time: {training_time} seconds')
 
     # EVALUATE THE MODEL
-    f1_micro, f1_macro, f1_weigh, auc, prec_0, rec_0, prec_1, rec_1 = eval_node_classifier(model, data, target_type, seed, embeddings_dir, mode)
+    f1_micro, f1_macro, f1_weigh, auc, prec_0, rec_0, prec_1, rec_1 = eval_node_classifier(model, data, target_type, seed, embeddings_dir)
 
     print(f'f1-micro: {f1_micro:.3f}, f1-macro: {f1_macro:.3f}, roc-auc: {auc:.3f}')
     print(f'precision_0: {prec_0:.3f}, recall_0: {rec_0:.3f},  precision_1: {prec_1:.3f}, recall_1: {rec_1:.3f}')
 
     # SAVE THE MODEL
-    model_path = os.path.join(models_dir, f"{dataset_name}_{mode}_seed{seed}_model.pth")
-    torch.save(model.state_dict(), model_path)
+    #model_path = os.path.join(models_dir, f"{dataset_name}_seed{seed}_model.pth")
+    #torch.save(model.state_dict(), model_path)
 
     # SAVE THE RESULTS
     df = pd.DataFrame([{
         'Seed': seed, 'F1_micro': f1_micro, 'F1_macro': f1_macro, 'ROC-AUC': auc, 'Prec_0': prec_0, 'Rec_0': rec_0,
         'Prec_1': prec_1, 'Rec_1': rec_1, 'Time': training_time
     }])
-    results_path = os.path.join(results_dir, f'{dataset_name}_{mode}_seed{seed}_results.xlsx')
+    results_path = os.path.join(results_dir, f'{dataset_name}_seed{seed}_results.xlsx')
     print(df)
     df.to_excel(results_path, index=False)
     print(f"Saved at {os.path.abspath(results_path)}")

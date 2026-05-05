@@ -1,35 +1,32 @@
 #!/bin/bash
 
+export PYTHONPATH=$PYTHONPATH:/Projects/M3DUSA_active/
+
 dataset_name="mumin" #politifact
 
-modes=("only_net_edges" "only_net_edges_mps" "only_net_edges_meta" "only_net_edges_mps_meta" "EF_all" "EF_256")
+num_layers=3 #2 pe rpolitifact
+hidden_channels=64
+dropout=0.3
+learning_rate=0.005
 
 training_seeds=(42 123 12345 123123 2025)
-#num_seeds=${#training_seeds[@]}
 
-base_dir='/mnt/nas/martirano/mumin'
-split='60_15_25'
-task="_${split}_3layers"
-embeddings_dir="$base_dir/embeddings$task"
-models_dir="$base_dir/best_models$task"
-results_dir="$base_dir/results$task"
-losses_dir="$base_dir/losses$task"
+base_dir="/home/martirano/data/$dataset_name/"
+embeddings_dir="$base_dir/embeddings_M3DUSA_active"
+results_dir="$base_dir/results_M3DUSA_active"
 
-for dir in "$embeddings_dir" "$models_dir" "$results_dir" "$losses_dir"; do
+for dir in "$embeddings_dir" "$results_dir"; do
     if [ ! -d "$dir" ]; then
         echo "Creating directory: $dir"
         mkdir -p "$dir"
     fi
 done
 
-export PYTHONPATH=$PYTHONPATH:/home/martirano/Projects/M3DUSA/src
 
-for mode in "${modes[@]}"
+
+for seed in "${training_seeds[@]}"
 do
-    for seed_index in "${!training_seeds[@]}"  # Iterate over seed indices
-    do
-        seed="${training_seeds[$seed_index]}"  # Get actual seed value
-        echo "### Running experiment with dataset: $dataset_name, split: $split, mode: $mode, seed_index: $seed_index, seed: $seed ###"
-        python src/main_ES.py "$dataset_name" "$split" "$mode" "$seed_index" "$seed" "$embeddings_dir" "$models_dir" "$results_dir" "$losses_dir"
-    done
+    echo "### Running experiment with dataset: $dataset_name, seed: $seed, num_layers "$num_layers", hidden_channels "$hidden_channels", dropout "$dropout", learning_rate "$learning_rate" ###"
+    echo "Saving in "$results_dir", "$embeddings_dir""
+    python src/main_ES.py --dataset_name "$dataset_name" --seed "$seed" --num_layers "$num_layers" --hidden_channels "$hidden_channels" --dropout "$dropout" --learning_rate "$learning_rate" --results_dir "$results_dir" --embs_dir "$embeddings_dir"
 done

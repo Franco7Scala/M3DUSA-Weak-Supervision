@@ -10,8 +10,16 @@ from src._trash.support.utils import get_base_dir
 from src._trash.support.utils_graph import k_hop_subgraph
 
 
+def get_target_type(dataset_name):
+    if dataset_name == "mumin":
+        return "claim"
+    if dataset_name == "politifact":
+        return "news"
+    else:
+        raise ValueError(f"Dataset {dataset_name} not supported")
+
 # EARLY FUSION
-def build_heterodata(dataset_name): # "politifact", "mumin"
+def build_heterodata(dataset_name, target_type): # "politifact", "mumin"
     data = HeteroData()
     heterodata_dir = os.path.join(get_base_dir(), dataset_name, "heterodata")
     feats_dir = os.path.join(heterodata_dir, "features")
@@ -24,7 +32,6 @@ def build_heterodata(dataset_name): # "politifact", "mumin"
         data[n_type].x = torch.load(os.path.join(feats_dir, fname))
 
     # ground_truth for target_type
-    target_type = "claim" if dataset_name == "mumin" else "news"
     data[target_type].y = torch.load(os.path.join(heterodata_dir, f'{target_type}_labels.pt'))
 
     # edges
