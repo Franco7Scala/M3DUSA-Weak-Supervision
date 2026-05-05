@@ -1,9 +1,9 @@
-from src.data_loading.mumin import load_mumin_heterodata
-from src.data_loading.mumin_embeddings import load_mumin_embeddings
-from src.data_loading.mumin_model import load_mumin_model
-from src.data_loading.politifact import load_politifact_heterodata
-from src.data_loading.politifact_embeddings import load_politifact_embeddings
-from src.data_loading.politifact_model import load_politifact_model
+from src._trash.m3dusa_old.data_loading.mumin import load_mumin_heterodata
+from src._trash.m3dusa_old.data_loading.mumin_embeddings import load_mumin_embeddings
+from src._trash.m3dusa_old.data_loading.mumin_model import load_mumin_model
+from src._trash.m3dusa_old.data_loading.politifact import load_politifact_heterodata
+from src._trash.m3dusa_old.data_loading.politifact_embeddings import load_politifact_embeddings
+from src._trash.m3dusa_old.data_loading.politifact_model import load_politifact_model
 from src.utils import get_base_dir
 
 

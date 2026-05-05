@@ -1,9 +1,8 @@
 import torch
 import torch.nn.functional as F
-from torch_geometric.data import HeteroData
 
 # Import locali
-from src._trash.dataset.dataset_loader import load_dataset
+from src.dataset_loader import load_dataset
 # Assicurati che il file generato precedentemente sia salvato come agcl_model.py nella cartella corretta
 from src._trash._competitors.AGCL.AGCL import AGCL, calculate_h_index, sir_simulation
 

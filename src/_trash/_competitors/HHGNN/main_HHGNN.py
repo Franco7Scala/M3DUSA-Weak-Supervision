@@ -1,11 +1,9 @@
 import os
 import torch
 import torch.nn.functional as F
-import numpy as np
 
-from torch_geometric.utils import to_dense_adj, dense_to_sparse
 from src._trash._competitors.HHGNN.HHGNN import heterodata_to_global_adj, get_mo_cam, HHGNN
-from src._trash.dataset.dataset_loader import load_dataset
+from src.dataset_loader import load_dataset
 from src._trash.influence.simulation.influence_score_ic import compute_influence_scores
 from src._trash.support.utils import get_device, get_base_dir
 from src._trash.support.utils_graph import build_metapath_graphs, compute_layer_probabilities

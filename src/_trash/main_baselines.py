@@ -1,6 +1,6 @@
 import warnings
 
-from src._trash.dataset.dataset_loader import load_dataset
+from src.dataset_loader import load_dataset
 from src._trash.influence.proxy.IC_proxy import compute_ic_like_influence_scores
 from src._trash.models.gat.hetero_gat import HeteroGAT
 from src._trash.influence.simulation.influence_score_ic import compute_influence_scores

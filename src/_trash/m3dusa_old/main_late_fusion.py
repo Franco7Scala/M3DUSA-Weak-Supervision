@@ -7,7 +7,7 @@ from torch_geometric.data import DataLoader
 import torch.nn as nn
 import time
 
-from src.data_loading.politifact_embeddings import get_reduced_embedding
+from src._trash.m3dusa_old.data_loading.politifact_embeddings import get_reduced_embedding
 from src.models.LF_attention import AttentionFusionModel
 from src.models.LF_bilinear import BilinearFusionModel
 from src.models.LF_equal_contribution import LateFusionModel
@@ -16,7 +16,7 @@ from src.models.LF_weighted import WeightedFusionModel
 from src.models.classifier_enhanced import EnhancedClassifier
 from src.training.trainer_late_fusion import train_fusion_model, train_classifier, evaluate_classifier, extract_fused_embeddings
 from src.utils import compute_weights, get_device, set_random_seed
-from src.utils_datasets import load_dataset, load_embeddings, get_target_type
+from src._trash.m3dusa_old.utils_datasets import load_dataset, load_embeddings, get_target_type
 
 
 

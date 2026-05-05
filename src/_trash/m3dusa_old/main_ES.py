@@ -6,7 +6,6 @@ from torch_geometric.nn import to_hetero
 import torch.nn as nn
 import time
 
-from src.dataset_loader import build_heterodata
 from src.models.GAT import GAT
 from src.training.trainer_ES import train_node_classifier, eval_node_classifier
 from src.utils import compute_weights, get_device, set_random_seed
@@ -30,7 +29,7 @@ if __name__ == "__main__":
 
     # LOAD THE DATASET
     target_type = get_target_type(dataset_name)
-    data = build_heterodata(dataset_name)
+    data = load_dataset(dataset_name, split, mode, seed)
 
     # SET THE MODEL
     # model = None

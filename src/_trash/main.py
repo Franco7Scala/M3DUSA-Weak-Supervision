@@ -4,7 +4,7 @@ import warnings
 from src._trash.active_learning.node_sampler import ActiveLearningSampler
 from src.mixed_loss.nc_loss import NCLoss
 from src._trash.models.gat.trainer import train, evaluate
-from src._trash.dataset.dataset_loader import load_dataset
+from src.dataset_loader import load_dataset
 from src._trash.influence.proxy.IC_proxy import compute_ic_like_influence_scores
 from src._trash.influence.influence_groups import compare_scores_and_return_groups
 from src._trash.models.gat.hetero_gat import HeteroGAT
