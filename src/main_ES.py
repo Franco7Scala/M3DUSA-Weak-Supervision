@@ -6,7 +6,7 @@ from torch_geometric.nn import to_hetero
 import torch.nn as nn
 import time
 
-from src.dataset_loader import get_target_type, build_heterodata
+from src.dataset_loader import get_target_type, build_heterodata, load_surrogate_embeddings
 from src.models.GAT import GAT
 from src.training.trainer_ES import train_node_classifier, eval_node_classifier
 from src.utils import compute_weights, get_device, set_random_seed
@@ -46,16 +46,20 @@ if __name__ == "__main__":
 
     set_random_seed(seed)
 
+    device = torch.device(get_device() if torch.cuda.is_available() else 'cpu')
+
     # LOAD THE DATASET
     target_type = get_target_type(dataset_name)
     data = build_heterodata(dataset_name, target_type)
+
+    # LOAD SURROGATE
+    embeddings = load_surrogate_embeddings(data, device=device)
 
     # SET THE MODEL
     # model = None
     model = GAT(hidden_channels=hidden_channels, dropout=dropout, num_layers=num_layers, out_channels=2) #num layers 3 per mumin, 2 per politifact
     model = to_hetero(model, data.metadata(), aggr='sum')
 
-    device = torch.device(get_device() if torch.cuda.is_available() else 'cpu')
     data, model = data.to(device), model.to(device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-3)

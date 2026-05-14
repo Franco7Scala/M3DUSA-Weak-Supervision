@@ -1,13 +1,12 @@
 import os
 import torch
+import pandas as pd
+import numpy as np
 
 from torch_geometric.data.hetero_data import HeteroData
-from torch_geometric.datasets import IMDB, AMiner
-from torch_geometric.datasets.dblp import DBLP
 import torch_geometric.transforms as T
 from torch_geometric.transforms import AddMetaPaths
 from src._trash.support.utils import get_base_dir
-from src._trash.support.utils_graph import k_hop_subgraph
 
 
 def get_target_type(dataset_name):
@@ -120,3 +119,18 @@ def _get_metapaths(dataset_name):
         ]
 
     return metapaths
+
+
+def load_surrogate_embeddings(dataset_name, device, emb_dim=256):
+    if dataset_name.lower() == "mumin":
+        df = pd.read_parquet(os.path.join(get_base_dir(), dataset_name, "claim_embeddings.parquet"))
+        embeddings = np.stack(df['embedding'].values)
+    else: #politifact
+        df = pd.read_csv(os.path.join(get_base_dir(), dataset_name, "news_embeddings.csv"))
+        embeddings = np.array([np.fromstring(x.strip('[]'), sep=' ') for x in df['embedding']])
+
+    # check dimension and convert to torch tensors
+    dim = np.array(np.fromstring(df['embedding'].iloc[0].strip('[]'), sep=' ')).shape[0]
+    if dim > emb_dim:
+        embeddings = PCA(n_components=emb_dim).fit(embeddings)
+    return torch.from_numpy(embeddings, dtype=torch.float32, device=device)
