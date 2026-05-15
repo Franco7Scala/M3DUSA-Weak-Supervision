@@ -199,7 +199,22 @@ def processing_HetSMCG_results(directory, fname_in, fname_out, method):
     df_new.to_excel(os.path.join(directory, fname_out), index=False)
 
 
+def print_metrics(data):
+    for head, metrics in data.items():
+        print(f"{head.replace('_', ' ').upper()}")
+        print("-" * 50)
+        for key, value in metrics.items():
+            if isinstance(value, (numpy.ndarray, list)):
+                formatted_list = ", ".join([f"{x:.4f}" for x in value])
+                print(f"{key:<15}: [{formatted_list}]")
 
+            elif isinstance(value, (int, float)):
+                print(f"{key:<15}: {value:.4f}")
+
+            else:
+                print(f"{key:<15}: {value}")
+
+        print("-" * 50)
 
 
 

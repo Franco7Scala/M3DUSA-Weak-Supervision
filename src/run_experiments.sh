@@ -26,7 +26,7 @@ done
 
 for seed in "${training_seeds[@]}"
 do
-    echo "### Running experiment with dataset: $dataset_name, seed: $seed, num_layers "$num_layers", hidden_channels "$hidden_channels", dropout "$dropout", learning_rate "$learning_rate" ###"
+    echo "### Running experiment with dataset: $dataset_name, seed: $seed, num-layers "$num_layers", hidden-channels "$hidden_channels", dropout "$dropout", learning-rate "$learning_rate" ###"
     echo "Saving in "$results_dir", "$embeddings_dir""
-    python src/main_ES.py --dataset_name "$dataset_name" --seed "$seed" --num_layers "$num_layers" --hidden_channels "$hidden_channels" --dropout "$dropout" --learning_rate "$learning_rate" --results_dir "$results_dir" --embs_dir "$embeddings_dir"
+    python src/main_ES.py --dataset-name "$dataset_name" --seed "$seed" --num-layers "$num_layers" --hidden-channels "$hidden_channels" --dropout "$dropout" --learning-rate "$learning_rate" --results-dir "$results_dir" --embs-dir "$embeddings_dir"
 done

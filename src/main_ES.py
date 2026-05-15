@@ -3,36 +3,28 @@ import argparse
 import torch
 import pandas as pd
 from torch_geometric.nn import to_hetero
-import torch.nn as nn
 import time
 
 from src.dataset_loader import get_target_type, build_heterodata, load_surrogate_embeddings
+from src.mixed_loss.mixed_loss import MixedLoss
 from src.models.GAT import GAT
 from src.training.trainer_ES import train_node_classifier, eval_node_classifier
-from src.utils import compute_weights, get_device, set_random_seed
+from src.utils import get_device, set_random_seed
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description="Run M3DUSA_active experiment")
-
-    parser.add_argument("--dataset_name", type=str, default="politifact",
-                        help="Name of the dataset (e.g., politifact)")
-    parser.add_argument("--seed", type=int, default=42,
-                        help="Random seed for training")
-    parser.add_argument("--num_layers", type=int, default=3,
-                        help="Number of GAT layers")
-    parser.add_argument("--hidden_channels", type=int, default=128,
-                        help="Size of hidden channels")
-    parser.add_argument("--dropout", type=float, default=0.3,
-                        help="Dropout probability")
-    parser.add_argument("--learning_rate", type=float, default=0.005,
-                        help="Learning rate")
-    parser.add_argument("--results_dir", type=str, default=os.path.join(os.getcwd(), "results"),
-                        help="Path (directory) to store results")
-    parser.add_argument("--embs_dir", type=str, default=os.path.join(os.getcwd(), "embeddings"),
-                        help="Path (directory) to store embeddings")
-
+    parser.add_argument("--dataset-name", type=str, default="politifact", help="Name of the dataset (e.g., politifact)")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for training")
+    parser.add_argument("--num-layers", type=int, default=3, help="Number of GAT layers")
+    parser.add_argument("--hidden-channels", type=int, default=128, help="Size of hidden channels")
+    parser.add_argument("--dropout", type=float, default=0.3, help="Dropout probability")
+    parser.add_argument("--learning-rate", type=float, default=0.005, help="Learning rate")
+    parser.add_argument("--results-dir", type=str, default=os.path.join(os.getcwd(), "results"), help="Path (directory) to store results")
+    parser.add_argument("--embs-dir", type=str, default=os.path.join(os.getcwd(), "embeddings"), help="Path (directory) to store embeddings")
+    parser.add_argument("--weight-main-component", type=float, default=1.0, help="Weight main component of the loss")
+    parser.add_argument("--weight-proxy-component", type=float, default=1.0, help="Weight proxy component of the loss")
+    parser.add_argument("--weight-consistency", type=float, default=1.0, help="Weight consistency component of the loss")
     args = parser.parse_args()
 
     dataset_name = args.dataset_name
@@ -64,8 +56,10 @@ if __name__ == "__main__":
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-3)
     targets = data[target_type].y
-    weights = compute_weights(targets).float().to(device)
-    criterion = nn.CrossEntropyLoss(weights)
+    weight_main_component = args.weight_main_component
+    weight_proxy_component = args.weight_proxy_component
+    weight_consistency = args.weight_consistency
+    criterion = MixedLoss(weight_main_component=weight_main_component, weight_proxy_component=weight_proxy_component, weight_consistency=weight_consistency)
 
     # TRAIN THE MODEL
     start_time = time.time()
