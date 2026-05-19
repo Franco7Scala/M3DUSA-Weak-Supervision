@@ -6,7 +6,8 @@ import numpy as np
 from torch_geometric.data.hetero_data import HeteroData
 import torch_geometric.transforms as T
 from torch_geometric.transforms import AddMetaPaths
-from src._trash.support.utils import get_base_dir
+
+from src.utils import get_base_dir
 
 
 def get_target_type(dataset_name):
@@ -30,8 +31,10 @@ def build_heterodata(dataset_name, target_type): # "politifact", "mumin"
         n_type = fname[:-3]  # remove the last 4 characters (".pt")
         data[n_type].x = torch.load(os.path.join(feats_dir, fname))
 
-    # ground_truth for target_type
-    data[target_type].y = torch.load(os.path.join(heterodata_dir, f'{target_type}_labels.pt'))
+    # ground_truth for target_type: (ground truth, surrogate ground truth)
+    gt = torch.load(os.path.join(heterodata_dir, f'{target_type}_labels.pt'))
+    surrogate_gt = load_ground_truth_texts(dataset_name)  # TODO #stored in a tensor dimx1 
+    data[target_type].y = (surrogate_gt, gt)
 
     # edges
     files_edges = [f for f in os.listdir(edges_dir) if os.path.isfile(os.path.join(edges_dir, f))]
@@ -131,6 +134,6 @@ def load_surrogate_embeddings(dataset_name, device, emb_dim=256):
 
     # check dimension and convert to torch tensors
     dim = np.array(np.fromstring(df['embedding'].iloc[0].strip('[]'), sep=' ')).shape[0]
-    if dim > emb_dim:
-        embeddings = PCA(n_components=emb_dim).fit(embeddings)
-    return torch.from_numpy(embeddings, dtype=torch.float32, device=device)
+    #if dim > emb_dim:
+    #    embeddings = PCA(n_components=emb_dim).fit(embeddings)
+    return torch.tensor(embeddings, dtype=torch.float32, device=device)

@@ -44,9 +44,6 @@ if __name__ == "__main__":
     target_type = get_target_type(dataset_name)
     data = build_heterodata(dataset_name, target_type)
 
-    # LOAD SURROGATE
-    embeddings = load_surrogate_embeddings(data, device=device)
-
     # SET THE MODEL
     # model = None
     model = GAT(hidden_channels=hidden_channels, dropout=dropout, num_layers=num_layers, out_channels=2) #num layers 3 per mumin, 2 per politifact
