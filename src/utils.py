@@ -1,21 +1,19 @@
 import torch
 import pandas as pd
-import numpy as np
+import numpy
 import pickle
 import os
 import shutil
-import glob
 import re
 from statistics import stdev
 import scipy
-from fontTools.ttx import process
 from torch import nn
 
 
 training_seed = [42, 123, 12345, 123123, 2025]
 
 def set_random_seed(seed):
-    np.random.seed(seed)
+    numpy.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
@@ -200,6 +198,7 @@ def processing_HetSMCG_results(directory, fname_in, fname_out, method):
 
 
 def print_metrics(data):
+    print("-" * 50)
     for head, metrics in data.items():
         print(f"{head.replace('_', ' ').upper()}")
         print("-" * 50)

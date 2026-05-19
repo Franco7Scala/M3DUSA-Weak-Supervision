@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import os
+import transformers
 
 from sklearn.model_selection import train_test_split
 from torch import optim
@@ -16,9 +17,9 @@ from src.utils import print_metrics
 
 if __name__ == "__main__":
     model_name = "FacebookAI/roberta-base"
-    dataset_path = "/data/dataset_embeddings_by_roberta.pt"
-    model_save_path = "/models/classification_head.pt"
-    epochs = 10
+    dataset_path = "./datasets/dataset_embeddings_by_roberta.pt"
+    model_save_path = "./models/classification_head.pt"
+    epochs = 200
     batch_size = 32
     random_state = 42
 
@@ -28,6 +29,7 @@ if __name__ == "__main__":
     print(f"Running on device: {device}")
 
     print(f"Loading model...")
+    transformers.logging.set_verbosity_error()
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModel.from_pretrained(model_name).to(device)
     model.eval()
@@ -45,7 +47,7 @@ if __name__ == "__main__":
         dataset = TextDataset(texts, labels)
 
         print(f"Extracting embeddings...")
-        x, y = extract_embeddings(texts, labels)
+        x, y = extract_embeddings(dataset, model, tokenizer, batch_size, device)
 
         print(f"Saving dataset...")
         torch.save({"x": x, "y": y}, dataset_path)
@@ -68,11 +70,11 @@ if __name__ == "__main__":
     optimizer = optim.AdamW(head_model.parameters(), lr=1e-3, weight_decay=0.01)
 
     print("\nTraining head...")
-    model = train(model, optimizer, criterion, epochs, train_dataloader, device)
+    head_model = train(head_model, optimizer, criterion, epochs, train_dataloader, device)
 
     print("\nEvaluating head...")
-    report = evaluate(model, test_dataloader, device)
-    print_metrics(report)
+    report = evaluate(head_model, test_dataloader, device)
+    print_metrics({"RESULTS": report})
 
     print("\nSaving head...")
     torch.save(head_model.state_dict(), model_save_path)
