@@ -3,8 +3,6 @@ import torch
 import numpy as np
 from sklearn.metrics import f1_score, roc_auc_score, precision_score, recall_score
 
-from src.utils import get_base_dir, save_to_pickle
-
 
 def train_node_classifier(model, data, optimizer, criterion, seed, target_type, embeddings_dir, n_epochs=200, patience=20, epsilon=1e-4):
 
