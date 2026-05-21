@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.metrics import f1_score, roc_auc_score, precision_score, recall_score
 
 
+#data[target_type].y is a tuple (surrogate_gt, gt)
 def train_node_classifier(model, data, optimizer, criterion, seed, target_type, embeddings_dir, n_epochs=200, patience=20, epsilon=1e-4):
 
     best_val_f1 = 0.0  # To keep track of the best validation F1 score

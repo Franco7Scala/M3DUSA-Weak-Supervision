@@ -33,7 +33,7 @@ def build_heterodata(dataset_name, target_type): # "politifact", "mumin"
 
     # ground_truth for target_type: (ground truth, surrogate ground truth)
     gt = torch.load(os.path.join(heterodata_dir, f'{target_type}_labels.pt'))
-    surrogate_gt = load_ground_truth_texts(dataset_name)  # TODO #stored in a tensor dimx1 
+    surrogate_gt = torch.load(os.path.join(heterodata_dir, f'{target_type}_labels_surrogate.pt'))
     data[target_type].y = (surrogate_gt, gt)
 
     # edges
@@ -123,17 +123,3 @@ def _get_metapaths(dataset_name):
 
     return metapaths
 
-
-def load_surrogate_embeddings(dataset_name, device, emb_dim=256):
-    if dataset_name.lower() == "mumin":
-        df = pd.read_parquet(os.path.join(get_base_dir(), dataset_name, "claim_embeddings.parquet"))
-        embeddings = np.stack(df['embedding'].values)
-    else: #politifact
-        df = pd.read_csv(os.path.join(get_base_dir(), dataset_name, "news_embeddings.csv"))
-        embeddings = np.array([np.fromstring(x.strip('[]'), sep=' ') for x in df['embedding']])
-
-    # check dimension and convert to torch tensors
-    dim = np.array(np.fromstring(df['embedding'].iloc[0].strip('[]'), sep=' ')).shape[0]
-    #if dim > emb_dim:
-    #    embeddings = PCA(n_components=emb_dim).fit(embeddings)
-    return torch.tensor(embeddings, dtype=torch.float32, device=device)
