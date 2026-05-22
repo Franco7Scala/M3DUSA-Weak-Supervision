@@ -2,13 +2,13 @@ import os
 import argparse
 import torch
 import pandas as pd
-from torch_geometric.nn import to_hetero
 import time
 
+from torch_geometric.nn import to_hetero
 from src.dataset.dataset_loader import get_target_type, build_heterodata
 from src.mixed_loss.mixed_loss import MixedLoss
 from src.models.GAT import GAT
-from src.training.trainer_ES import train_node_classifier, eval_node_classifier
+from src.training.trainer_surrogate import train_node_classifier, eval_node_classifier
 from src.support.utils import get_device, set_random_seed
 
 
@@ -16,15 +16,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run M3DUSA_active experiment")
     parser.add_argument("--dataset-name", type=str, default="politifact", help="Name of the dataset (e.g., politifact)")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for training")
-    parser.add_argument("--num-layers", type=int, default=3, help="Number of GAT layers")
+    parser.add_argument("--num-layers", type=int, default=2, help="Number of GAT layers")
     parser.add_argument("--hidden-channels", type=int, default=128, help="Size of hidden channels")
     parser.add_argument("--dropout", type=float, default=0.3, help="Dropout probability")
     parser.add_argument("--learning-rate", type=float, default=0.005, help="Learning rate")
     parser.add_argument("--results-dir", type=str, default=os.path.join(os.getcwd(), "results"), help="Path (directory) to store results")
     parser.add_argument("--embs-dir", type=str, default=os.path.join(os.getcwd(), "embeddings"), help="Path (directory) to store embeddings")
     parser.add_argument("--weight-main-component", type=float, default=1.0, help="Weight main component of the loss")
-    parser.add_argument("--weight-proxy-component", type=float, default=1.0, help="Weight proxy component of the loss")
-    parser.add_argument("--weight-consistency", type=float, default=1.0, help="Weight consistency component of the loss")
+    parser.add_argument("--weight-proxy-component", type=float, default=0.5, help="Weight proxy component of the loss")
+    parser.add_argument("--weight-consistency", type=float, default=0.5, help="Weight consistency component of the loss")
     args = parser.parse_args()
 
     dataset_name = args.dataset_name
@@ -45,7 +45,6 @@ if __name__ == "__main__":
     data = build_heterodata(dataset_name, target_type)
 
     # SET THE MODEL
-    # model = None
     model = GAT(hidden_channels=hidden_channels, dropout=dropout, num_layers=num_layers, out_channels=2) #num layers 3 per mumin, 2 per politifact
     model = to_hetero(model, data.metadata(), aggr='sum')
 

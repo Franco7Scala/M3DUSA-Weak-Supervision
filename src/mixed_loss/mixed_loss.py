@@ -16,12 +16,12 @@ class MixedLoss(nn.Module):
 
     def forward(self, output, target, mask=None):
         if mask is not None:
-            main_classification_loss = _masked_cross_entropy_loss(output[0], target[0], mask) * self.weight_main_component
+            main_classification_loss = _masked_cross_entropy_loss(output[0], target["ground_truth"], mask) * self.weight_main_component
 
         else:
-            main_classification_loss = _cross_entropy_loss(output[0], target[0]) * self.weight_main_component
+            main_classification_loss = _cross_entropy_loss(output[0], target["ground_truth"]) * self.weight_main_component
 
-        proxy_classification_loss = _cross_entropy_loss(output[2], target[2]) * self.weight_proxy_component
+        proxy_classification_loss = _cross_entropy_loss(output[1], target["ground_truth_surrogate"]) * self.weight_proxy_component
         consistency_loss = self.consistency_loss(output[0], output[1]) * self.weight_consistency
         return main_classification_loss + proxy_classification_loss + consistency_loss
 

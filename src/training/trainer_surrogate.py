@@ -19,7 +19,7 @@ def train_node_classifier(model, data, optimizer, criterion, seed, target_type, 
         optimizer.zero_grad()
         out, _ = model(data.x_dict, data.edge_index_dict)
         mask = data[target_type].train_mask
-        loss = criterion(out[target_type], data[target_type].y, mask)
+        loss = criterion((out["main"][target_type], out["surrogate"][target_type]), data[target_type].y, mask)
         loss.backward()
         optimizer.step()
         f1_micro, f1_macro, f1_weigh, auc, precision_0, recall_0, precision_1, recall_1 = eval_node_classifier(model, data, target_type, seed, embeddings_dir)
@@ -53,8 +53,8 @@ def eval_node_classifier(model, data, target_type, seed, embeddings_dir):
         # pred = model(data.x_dict, data.edge_index_dict)['claim'].argmax(dim=-1)
         out, embeddings = model(data.x_dict, data.edge_index_dict)
         mask = data[target_type].val_mask
-        pred = out[target_type].argmax(dim=-1)
-        y_true = data[target_type].y[mask].cpu()
+        pred = out["main"][target_type].argmax(dim=-1)
+        y_true = data[target_type].y["ground_truth"][mask].cpu()
         y_pred = pred[mask].cpu()
         f1_micro = f1_score(y_true,y_pred, average='micro')
         f1_macro = f1_score(y_true,y_pred, average='macro')

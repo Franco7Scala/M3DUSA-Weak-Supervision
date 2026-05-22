@@ -1,4 +1,6 @@
 import torch
+import torch.nn as nn
+
 from torch_geometric.nn import GATv2Conv, Linear
 
 
@@ -20,13 +22,21 @@ class GAT(torch.nn.Module):
             self.lins.append(Linear(-1, hidden_channels))
 
         # Last layer
-        self.convs.append(GATv2Conv((-1, -1), hidden_channels, add_self_loops=False,
-                                    dropout=dropout))  # Change out_channels to hidden_channels
+        self.convs.append(GATv2Conv((-1, -1), hidden_channels, add_self_loops=False, dropout=dropout))  # Change out_channels to hidden_channels
         self.lins.append(Linear(-1, hidden_channels))  # Change out_channels to hidden_channels
 
-        self.final_conv = GATv2Conv((-1, -1), out_channels, add_self_loops=False,
-                                    dropout=dropout)  # Add final GAT layer for classification
-        self.final_lin = Linear(-1, out_channels)  # Add final linear layer for classification
+        self.head_main = nn.Sequential(
+            Linear(-1, 32),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            Linear(32, out_channels)
+        )
+        self.head_surrogate = nn.Sequential(
+            Linear(-1, 32),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            Linear(32, out_channels)
+        )
 
     def forward(self, x, edge_index):
         for i in range(self.num_layers - 1):
@@ -37,5 +47,6 @@ class GAT(torch.nn.Module):
         self.embeddings = self.convs[-1](x, edge_index) + self.lins[-1](x.relu())
 
         # Last layer (no ReLU after the last convolution)
-        x = self.final_conv(self.embeddings, edge_index) + self.final_lin(self.embeddings.relu())
-        return x, self.embeddings
+        out_main = self.head_main(self.embeddings)
+        out_surrogate = self.head_surrogate(self.embeddings)
+        return {"main": out_main, "surrogate": out_surrogate}, self.embeddings
