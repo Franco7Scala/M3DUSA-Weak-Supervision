@@ -32,11 +32,13 @@ def build_heterodata(dataset_name, target_type): # "politifact", "mumin"
         data[n_type].x = torch.load(os.path.join(feats_dir, fname))
 
     # ground_truth for target_type: (ground truth, surrogate ground truth)
-    gt = torch.load(os.path.join(heterodata_dir, f'{target_type}_labels.pt'))
-    surrogate_gt = torch.load(os.path.join(heterodata_dir, f'{target_type}_labels_surrogate.pt'))
+    gt = torch.load(os.path.join(heterodata_dir, f"{target_type}_labels.pt"))
+    surrogate_gt = torch.load(os.path.join(heterodata_dir, f"{target_type}_labels_surrogate.pt"))
+    confidence_surrogate = torch.load(os.path.join(heterodata_dir, "confidence_surrogate.pt"))
     data[target_type].y = {}
     data[target_type].y["ground_truth"] = gt
     data[target_type].y["ground_truth_surrogate"] = surrogate_gt
+    data[target_type].y["confidence_surrogate"] = confidence_surrogate
 
     # edges
     files_edges = [f for f in os.listdir(edges_dir) if os.path.isfile(os.path.join(edges_dir, f))]

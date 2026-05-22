@@ -20,6 +20,11 @@ def create_surrogate_labels(dataset_name):
     tens = torch.tensor(df["surrogate_labels"].values)
     return tens
 
+def store_confidence(dataset_name):
+    df = pd.read_csv(os.path.join(get_base_dir(), dataset_name, "news_all.csv"))
+    tens = torch.tensor(df["confidences"].values)
+    return tens
+
 
 if __name__ == '__main__':
     #df = load_texts()
@@ -27,11 +32,13 @@ if __name__ == '__main__':
     #df.to_csv(os.path.join(get_base_dir(), "mumin", "claims.csv"), index=False)
 
 
-    dataset_name = "mumin" #"politifact"
+    dataset_name = "politifact" #"mumin"
     heterodata_dir = os.path.join(get_base_dir(), dataset_name, "heterodata")
-    gt = torch.load(os.path.join(heterodata_dir, "claim_labels.pt"))
+    #gt = torch.load(os.path.join(heterodata_dir, "claim_labels.pt"))
     #gt_surrogate = create_surrogate_labels(dataset_name)
     #torch.save(gt_surrogate, os.path.join(heterodata_dir, "claim_labels_surrogate.pt"))
     #gt = torch.load(os.path.join(heterodata_dir, "news_labels.pt"))
-    gt_surr = torch.load(os.path.join(heterodata_dir, "claim_labels_surrogate.pt"))
+    #gt_surr = torch.load(os.path.join(heterodata_dir, "claim_labels_surrogate.pt"))
+    tens = store_confidence(dataset_name)
+    torch.save(tens, os.path.join(heterodata_dir, "confidence_surrogate.pt"))
     print()
