@@ -3,14 +3,14 @@ import argparse
 import torch
 import pandas as pd
 import time
+import torch.nn as nn
 
 from torch_geometric.nn import to_hetero
 from src.dataset.dataset_loader import get_target_type, build_heterodata
-from src.mixed_loss.mixed_loss import MixedLoss
-from src.models.gat_surrogate import GATSurrogate
+from src.models.gat_es import GATES
 from src.support.robustness import masking_multimodal
-from src.training.trainer_surrogate import train_node_classifier, eval_node_classifier
-from src.support.utils import get_device, set_random_seed
+from src.training.trainer_es import train_node_classifier, eval_node_classifier
+from src.support.utils import get_device, set_random_seed, compute_weights
 
 
 if __name__ == "__main__":
@@ -23,9 +23,6 @@ if __name__ == "__main__":
     parser.add_argument("--learning-rate", type=float, default=0.005, help="Learning rate")
     parser.add_argument("--results-dir", type=str, default=os.path.join(os.getcwd(), "results"), help="Path (directory) to store results")
     parser.add_argument("--embs-dir", type=str, default=os.path.join(os.getcwd(), "embeddings"), help="Path (directory) to store embeddings")
-    parser.add_argument("--weight-main-component", type=float, default=1.0, help="Weight main component of the loss")
-    parser.add_argument("--weight-proxy-component", type=float, default=0.5, help="Weight proxy component of the loss")
-    parser.add_argument("--weight-consistency", type=float, default=0.5, help="Weight consistency component of the loss")
     parser.add_argument("--drop-percentage", type=float, default=0.5, help="Percentage of nodes to drop for robustness evaluation (0-100)")
     args = parser.parse_args()
 
@@ -47,7 +44,8 @@ if __name__ == "__main__":
     data = build_heterodata(dataset_name, target_type)
 
     # SET THE MODEL
-    model = GATSurrogate(hidden_channels=hidden_channels, dropout=dropout, num_layers=num_layers, out_channels=2) #num layers 3 per mumin, 2 per politifact
+    # model = None
+    model = GATES(hidden_channels=hidden_channels, dropout=dropout, num_layers=num_layers, out_channels=2) #num layers 3 per mumin, 2 per politifact
     model = to_hetero(model, data.metadata(), aggr='sum')
 
     data, model = data.to(device), model.to(device)
@@ -55,10 +53,8 @@ if __name__ == "__main__":
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-3)
     targets = data[target_type].y
-    weight_main_component = args.weight_main_component
-    weight_proxy_component = args.weight_proxy_component
-    weight_consistency = args.weight_consistency
-    criterion = MixedLoss(weight_main_component=weight_main_component, weight_proxy_component=weight_proxy_component, weight_consistency=weight_consistency)
+    weights = compute_weights(targets["ground_truth"]).float().to(device)
+    criterion = nn.CrossEntropyLoss(weights)
 
     # TRAIN THE MODEL
     start_time = time.time()
@@ -90,4 +86,3 @@ if __name__ == "__main__":
 
     #if run == 4:
     #merging_results_mode(results_dir, mode)
-

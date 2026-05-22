@@ -6,7 +6,7 @@ from torch_geometric.nn import to_hetero
 import torch.nn as nn
 import time
 
-from src.models.GAT import GAT
+from src.models.gat_surrogate import GATSurrogate
 from src.training.trainer_surrogate import train_node_classifier, eval_node_classifier
 from src.support.utils import compute_weights, get_device, set_random_seed
 from _trash.m3dusa_old.utils_datasets import get_target_type, load_dataset
@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     # SET THE MODEL
     # model = None
-    model = GAT(hidden_channels=64, out_channels=2, dropout=0.3, num_layers=3) #2 for politifact
+    model = GATSurrogate(hidden_channels=64, out_channels=2, dropout=0.3, num_layers=3) #2 for politifact
     model = to_hetero(model, data.metadata(), aggr='sum')
 
     device = torch.device(get_device() if torch.cuda.is_available() else 'cpu')
