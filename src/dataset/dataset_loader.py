@@ -34,7 +34,9 @@ def build_heterodata(dataset_name, target_type): # "politifact", "mumin"
     # ground_truth for target_type: (ground truth, surrogate ground truth)
     gt = torch.load(os.path.join(heterodata_dir, f'{target_type}_labels.pt'))
     surrogate_gt = torch.load(os.path.join(heterodata_dir, f'{target_type}_labels_surrogate.pt'))
-    data[target_type].y = (surrogate_gt, gt)
+    data[target_type].y = {}
+    data[target_type].y["ground_truth"] = gt
+    data[target_type].y["ground_truth_surrogate"] = surrogate_gt
 
     # edges
     files_edges = [f for f in os.listdir(edges_dir) if os.path.isfile(os.path.join(edges_dir, f))]
@@ -122,4 +124,9 @@ def _get_metapaths(dataset_name):
         ]
 
     return metapaths
+
+
+if __name__ == '__main__':
+    data = build_heterodata("politifact", "news")
+    print(data)
 
