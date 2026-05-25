@@ -2,7 +2,9 @@ import os
 import pandas as pd
 import torch
 
-from src.utils import get_base_dir
+def get_base_dir():
+    #return "/home/martirano/data"
+    return "/home/jovyan/projects/InfluentialNodes/"
 
 
 def load_texts():
@@ -21,7 +23,7 @@ def create_surrogate_labels(dataset_name):
     return tens
 
 def store_confidence(dataset_name):
-    df = pd.read_csv(os.path.join(get_base_dir(), dataset_name, "news_all.csv"))
+    df = pd.read_csv(os.path.join(get_base_dir(), "datasets", dataset_name, "news_all.csv"))
     tens = torch.tensor(df["confidences"].values)
     return tens
 
@@ -40,5 +42,6 @@ if __name__ == '__main__':
     #gt = torch.load(os.path.join(heterodata_dir, "news_labels.pt"))
     #gt_surr = torch.load(os.path.join(heterodata_dir, "claim_labels_surrogate.pt"))
     tens = store_confidence(dataset_name)
-    torch.save(tens, os.path.join(heterodata_dir, "confidence_surrogate.pt"))
+    print(f"Saving to: {os.path.join(get_base_dir(), 'datasets', dataset_name, 'confidence_surrogate.pt')}")
+    torch.save(tens, os.path.join(get_base_dir(), "datasets", dataset_name, "confidence_surrogate.pt"))
     print()

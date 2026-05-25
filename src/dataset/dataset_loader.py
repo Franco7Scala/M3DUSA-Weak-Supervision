@@ -21,7 +21,7 @@ def get_target_type(dataset_name):
 # EARLY FUSION
 def build_heterodata(dataset_name, target_type): # "politifact", "mumin"
     data = HeteroData()
-    heterodata_dir = os.path.join(get_base_dir(), dataset_name, "heterodata")
+    heterodata_dir = os.path.join(get_base_dir(), "datasets", dataset_name, "heterodata")
     feats_dir = os.path.join(heterodata_dir, "features")
     edges_dir = os.path.join(heterodata_dir, "edgelists")
 

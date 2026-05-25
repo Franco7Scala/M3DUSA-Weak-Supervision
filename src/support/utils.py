@@ -23,7 +23,8 @@ def set_random_seed(seed):
 
 
 def get_base_dir():
-    return "/home/martirano/data"
+    #return "/home/martirano/data"
+    return "/home/jovyan/projects/InfluentialNodes/"
 
 
 def get_device():

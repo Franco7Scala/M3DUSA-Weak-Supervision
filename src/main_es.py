@@ -14,7 +14,7 @@ from src.support.utils import get_device, set_random_seed, compute_weights
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run M3DUSA_active experiment")
+    parser = argparse.ArgumentParser(description="Run M3DUSA_baseline_experiment")
     parser.add_argument("--dataset-name", type=str, default="politifact", help="Name of the dataset (e.g., politifact)")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for training")
     parser.add_argument("--num-layers", type=int, default=2, help="Number of GAT layers")
@@ -37,7 +37,7 @@ if __name__ == "__main__":
 
     set_random_seed(seed)
 
-    device = torch.device(get_device() if torch.cuda.is_available() else 'cpu')
+    device = torch.device(get_device() if torch.cuda.is_available() else "cpu")
 
     # LOAD THE DATASET
     target_type = get_target_type(dataset_name)
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     # SET THE MODEL
     # model = None
     model = GATES(hidden_channels=hidden_channels, dropout=dropout, num_layers=num_layers, out_channels=2) #num layers 3 per mumin, 2 per politifact
-    model = to_hetero(model, data.metadata(), aggr='sum')
+    model = to_hetero(model, data.metadata(), aggr="sum")
 
     data, model = data.to(device), model.to(device)
     data = masking_multimodal(data, target_type, args.drop_percentage)
@@ -62,27 +62,19 @@ if __name__ == "__main__":
     end_time = time.time()
 
     training_time = end_time - start_time
-    print(f'Training time: {training_time} seconds')
+    print(f"Training time: {training_time} seconds")
 
     # EVALUATE THE MODEL
     f1_micro, f1_macro, f1_weigh, auc, prec_0, rec_0, prec_1, rec_1 = eval_node_classifier(model, data, target_type, seed, embeddings_dir)
 
-    print(f'f1-micro: {f1_micro:.3f}, f1-macro: {f1_macro:.3f}, roc-auc: {auc:.3f}')
-    print(f'precision_0: {prec_0:.3f}, recall_0: {rec_0:.3f},  precision_1: {prec_1:.3f}, recall_1: {rec_1:.3f}')
+    print(f"f1-micro: {f1_micro:.3f}, f1-macro: {f1_macro:.3f}, roc-auc: {auc:.3f}")
+    print(f"precision_0: {prec_0:.3f}, recall_0: {rec_0:.3f},  precision_1: {prec_1:.3f}, recall_1: {rec_1:.3f}")
 
     # SAVE THE MODEL
     #model_path = os.path.join(models_dir, f"{dataset_name}_seed{seed}_model.pth")
     #torch.save(model.state_dict(), model_path)
 
     # SAVE THE RESULTS
-    df = pd.DataFrame([{
-        'Seed': seed, 'F1_micro': f1_micro, 'F1_macro': f1_macro, 'ROC-AUC': auc, 'Prec_0': prec_0, 'Rec_0': rec_0,
-        'Prec_1': prec_1, 'Rec_1': rec_1, 'Time': training_time
-    }])
-    results_path = os.path.join(results_dir, f'{dataset_name}_seed{seed}_results.xlsx')
-    print(df)
-    df.to_excel(results_path, index=False)
-    print(f"Saved at {os.path.abspath(results_path)}")
-
-    #if run == 4:
-    #merging_results_mode(results_dir, mode)
+    df = pd.DataFrame([{"Seed": seed, "Drop-perc": args.drop_percentage, "F1_micro": f1_micro, "F1_macro": f1_macro, "ROC-AUC": auc, "Prec_0": prec_0, "Rec_0": rec_0, "Prec_1": prec_1, "Rec_1": rec_1, "Time": training_time, "Algo": "m3dusa"}])
+    results_path = os.path.join(results_dir, f"{dataset_name}_results.csv")
+    df.to_csv(results_path, mode="a", header=not os.path.exists(results_path), index=False)
