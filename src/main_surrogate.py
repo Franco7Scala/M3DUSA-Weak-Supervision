@@ -10,7 +10,7 @@ from src.mixed_loss.mixed_loss import MixedLoss
 from src.models.gat_surrogate import GATSurrogate
 from src.support.robustness import masking_multimodal
 from src.training.trainer_surrogate import train_node_classifier, eval_node_classifier
-from src.support.utils import get_device, set_random_seed
+from src.support.utils import get_device, set_random_seed, print_args, compute_weights
 
 
 if __name__ == "__main__":
@@ -29,6 +29,7 @@ if __name__ == "__main__":
     parser.add_argument("--drop-percentage", type=float, default=0.5, help="Percentage of nodes to drop for robustness evaluation (0-100)")
     args = parser.parse_args()
 
+    print_args(args)
     dataset_name = args.dataset_name
     seed = args.seed
     num_layers = args.num_layers
@@ -58,7 +59,8 @@ if __name__ == "__main__":
     weight_main_component = args.weight_main_component
     weight_proxy_component = args.weight_proxy_component
     weight_consistency = args.weight_consistency
-    criterion = MixedLoss(weight_main_component=weight_main_component, weight_proxy_component=weight_proxy_component, weight_consistency=weight_consistency)
+    weights = compute_weights(targets["ground_truth"]).float().to(device)
+    criterion = MixedLoss(weight_main_component=weight_main_component, weight_proxy_component=weight_proxy_component, weight_consistency=weight_consistency, weights=weights)
 
     # TRAIN THE MODEL
     start_time = time.time()
@@ -79,6 +81,6 @@ if __name__ == "__main__":
     #torch.save(model.state_dict(), model_path)
 
     # SAVE THE RESULTS
-    df = pd.DataFrame([{"Seed": seed, "Drop-perc": args.drop_percentage, "F1_micro": f1_micro, "F1_macro": f1_macro, "ROC-AUC": auc, "Prec_0": prec_0, "Rec_0": rec_0, "Prec_1": prec_1, "Rec_1": rec_1, "Time": training_time, "Algo": "m3dusa_sl"}])
+    df = pd.DataFrame([{"Seed": seed, "Drop-perc": args.drop_percentage, "Algo": "m3dusa_sl", "F1_micro": f1_micro, "F1_macro": f1_macro, "ROC-AUC": auc, "Prec_0": prec_0, "Rec_0": rec_0, "Prec_1": prec_1, "Rec_1": rec_1, "Time": training_time}])
     results_path = os.path.join(results_dir, f"{dataset_name}_results.csv")
-    df.to_csv(results_path, mode="a", header=not os.path.exists(results_path), index=False)
+    df.to_csv(results_path, mode="a", header=not os.path.exists(results_path), sep="\t", decimal=",", index=False)

@@ -18,8 +18,9 @@ def train_node_classifier(model, data, optimizer, criterion, seed, target_type, 
         model.train()
         optimizer.zero_grad()
         out, _ = model(data.x_dict, data.edge_index_dict)
-        mask = data[target_type].train_mask
-        loss = criterion((out["main"][target_type], out["surrogate"][target_type]), data[target_type].y, mask)
+        gt_mask = data[target_type].train_mask
+        surrogate_mask = data[target_type].train_surrogate_mask
+        loss = criterion((out["main"][target_type], out["surrogate"][target_type]), data[target_type].y, gt_mask, surrogate_mask)
         loss.backward()
         optimizer.step()
         f1_micro, f1_macro, f1_weigh, auc, precision_0, recall_0, precision_1, recall_1 = eval_node_classifier(model, data, target_type, seed, embeddings_dir)

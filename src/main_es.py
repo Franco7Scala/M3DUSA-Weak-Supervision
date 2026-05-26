@@ -10,7 +10,7 @@ from src.dataset.dataset_loader import get_target_type, build_heterodata
 from src.models.gat_es import GATES
 from src.support.robustness import masking_multimodal
 from src.training.trainer_es import train_node_classifier, eval_node_classifier
-from src.support.utils import get_device, set_random_seed, compute_weights
+from src.support.utils import get_device, set_random_seed, compute_weights, print_args
 
 
 if __name__ == "__main__":
@@ -26,6 +26,7 @@ if __name__ == "__main__":
     parser.add_argument("--drop-percentage", type=float, default=0.5, help="Percentage of nodes to drop for robustness evaluation (0-100)")
     args = parser.parse_args()
 
+    print_args(args)
     dataset_name = args.dataset_name
     seed = args.seed
     num_layers = args.num_layers
@@ -75,6 +76,6 @@ if __name__ == "__main__":
     #torch.save(model.state_dict(), model_path)
 
     # SAVE THE RESULTS
-    df = pd.DataFrame([{"Seed": seed, "Drop-perc": args.drop_percentage, "F1_micro": f1_micro, "F1_macro": f1_macro, "ROC-AUC": auc, "Prec_0": prec_0, "Rec_0": rec_0, "Prec_1": prec_1, "Rec_1": rec_1, "Time": training_time, "Algo": "m3dusa"}])
+    df = pd.DataFrame([{"Seed": seed, "Drop-perc": args.drop_percentage, "Algo": "m3dusa", "F1_micro": f1_micro, "F1_macro": f1_macro, "ROC-AUC": auc, "Prec_0": prec_0, "Rec_0": rec_0, "Prec_1": prec_1, "Rec_1": rec_1, "Time": training_time}])
     results_path = os.path.join(results_dir, f"{dataset_name}_results.csv")
     df.to_csv(results_path, mode="a", header=not os.path.exists(results_path), index=False)

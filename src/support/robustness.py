@@ -13,6 +13,7 @@ def masking_multimodal(data, target_type, drop_percentage):
         train_mask_new = torch.zeros_like(train_mask_old, dtype=torch.bool)
         train_mask_new[selected_train_indices] = True
         data[target_type].train_mask = train_mask_new
+        data[target_type].train_surrogate_mask = train_mask_old
     return data
 
 """half masked unimodal text and half masked unimodal network"""
