@@ -91,15 +91,7 @@ def _get_metapaths(dataset_name):
                      [('claim', 'is_discussed_by', 'tweet'),
                       ('tweet', 'has_hashtag', 'hashtag'),
                       ('hashtag', 'is_hashtag_of', 'tweet'),
-                      ('tweet', 'discusses', 'claim')],  # CTHTC
-                     [('claim', 'is_discussed_by', 'tweet'),
-                      ('tweet', 'is_replied_by', 'reply'),
-                      ('reply', 'reply_to', 'tweet'),
-                      ('tweet', 'discusses', 'claim')],  # CTRTC_r #######
-                     [('claim', 'is_discussed_by', 'tweet'),
-                      ('tweet', 'is_quoted_by', 'reply'),
-                      ('reply', 'quote_of', 'tweet'),
-                      ('tweet', 'discusses', 'claim')]  # CTRTC_q
+                      ('tweet', 'discusses', 'claim')]  # CTHTC
         ]
 
 
