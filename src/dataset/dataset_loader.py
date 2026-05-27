@@ -81,13 +81,6 @@ def _extract_edge_info(fname):
 
 
 def _get_metapaths(dataset_name):
-    if dataset_name.lower() == "politifact":
-        metapaths = [[('user', 'posted', 'tweet'),
-                      ('tweet', 'is_retweeted_by', 'user')],  # UTU
-                     [('user', 'posted', 'tweet'),
-                      ('tweet', 'has_hashtag', 'hashtag'),
-                      ('hashtag', 'is_hashtag_of', 'tweet'),
-                      ('tweet', 'is_posted_by', 'user')]]  # UTHTU
 
     if dataset_name.lower() == "mumin":
         metapaths = [
@@ -102,7 +95,7 @@ def _get_metapaths(dataset_name):
                      [('claim', 'is_discussed_by', 'tweet'),
                       ('tweet', 'is_replied_by', 'reply'),
                       ('reply', 'reply_to', 'tweet'),
-                      ('tweet', 'discusses', 'claim')],  # CTRTC_r
+                      ('tweet', 'discusses', 'claim')],  # CTRTC_r #######
                      [('claim', 'is_discussed_by', 'tweet'),
                       ('tweet', 'is_quoted_by', 'reply'),
                       ('reply', 'quote_of', 'tweet'),
@@ -131,6 +124,6 @@ def _get_metapaths(dataset_name):
 
 
 if __name__ == '__main__':
-    data = build_heterodata("politifact", "news")
+    data = build_heterodata("mumin", "claim")
     print(data)
 
