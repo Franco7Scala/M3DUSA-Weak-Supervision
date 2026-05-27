@@ -41,7 +41,8 @@ def ensure_clean_directory(directory):
 def load_embeddings(dataset_name, target_type):
     file_path = os.path.join(get_base_dir(), dataset_name, f"{target_type}_all.csv")
     df = pd.read_csv(file_path)
-    arr = df["embedding_roberta"].values
+    col_embs_name = "embedding" if dataset_name=="mumin" else "embedding_roberta"
+    arr = df[col_embs_name].values
     return np.array([ast.literal_eval(x) for x in arr], dtype=float)
 
 
