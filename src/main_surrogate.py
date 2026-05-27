@@ -47,6 +47,12 @@ if __name__ == "__main__":
     target_type = get_target_type(dataset_name)
     data = build_heterodata(dataset_name, target_type)
 
+    ### DOVE STANNO LE COSE (avrei voluto farti una print) ###
+    # gli embeddings stanno in data.embeddings (Nota: presi da news_all.csv e claim_all.csv cioè {target_type}_all.csv (colonna "embedding_roberta"). Si suppone che il csv sia fratello della cartella heterodata)
+    # la ground truth surrogata sta in data[target_type].y["ground_truth_surrogate"]
+    # la ground truth vera sta in data[target_type].y["ground_truth"]
+
+
     # SET THE MODEL
     model = GATSurrogate(hidden_channels=hidden_channels, dropout=dropout, num_layers=num_layers, out_channels=2) #num layers 3 per mumin, 2 per politifact
     model = to_hetero(model, data.metadata(), aggr="sum")

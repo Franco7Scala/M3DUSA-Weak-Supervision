@@ -6,6 +6,8 @@ import os
 import shutil
 import re
 import scipy
+import numpy as np
+import ast
 
 from statistics import stdev
 from torch import nn
@@ -23,8 +25,8 @@ def set_random_seed(seed):
 
 
 def get_base_dir():
-    #return "/home/martirano/data"
-    return "/home/jovyan/projects/InfluentialNodes/"
+    return "/home/martirano/data"
+    #return "/home/jovyan/projects/InfluentialNodes/"
 
 
 def get_device():
@@ -34,6 +36,13 @@ def ensure_clean_directory(directory):
     if os.path.exists(directory):
         shutil.rmtree(directory)  # Remove the directory and all its contents
     os.makedirs(directory)
+
+
+def load_embeddings(dataset_name, target_type):
+    file_path = os.path.join(get_base_dir(), dataset_name, f"{target_type}_all.csv")
+    df = pd.read_csv(file_path)
+    arr = df["embedding_roberta"].values
+    return np.array([ast.literal_eval(x) for x in arr], dtype=float)
 
 
 def load_from_pickle(pckl_file):

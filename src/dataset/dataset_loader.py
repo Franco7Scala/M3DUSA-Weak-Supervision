@@ -7,7 +7,7 @@ from torch_geometric.data.hetero_data import HeteroData
 import torch_geometric.transforms as T
 from torch_geometric.transforms import AddMetaPaths
 
-from src.support.utils import get_base_dir
+from src.support.utils import get_base_dir, load_embeddings
 
 
 def get_target_type(dataset_name):
@@ -21,7 +21,7 @@ def get_target_type(dataset_name):
 # EARLY FUSION
 def build_heterodata(dataset_name, target_type): # "politifact", "mumin"
     data = HeteroData()
-    heterodata_dir = os.path.join(get_base_dir(), "datasets", dataset_name, "heterodata")
+    heterodata_dir = os.path.join(get_base_dir(), dataset_name, "heterodata")
     feats_dir = os.path.join(heterodata_dir, "features")
     edges_dir = os.path.join(heterodata_dir, "edgelists")
 
@@ -63,6 +63,8 @@ def build_heterodata(dataset_name, target_type): # "politifact", "mumin"
     data[target_type].val_mask = index_to_mask(indices_masks[seed]["val"], mask_dim)
     data[target_type].test_mask = index_to_mask(indices_masks[seed]["test"], mask_dim)
     """
+
+    data.embeddings = load_embeddings(dataset_name, target_type)
 
     return data
 
