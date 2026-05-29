@@ -83,17 +83,22 @@ def _extract_edge_info(fname):
 def _get_metapaths(dataset_name):
 
     if dataset_name.lower() == "mumin":
-        metapaths = [
-            [('claim', 'is_discussed_by', 'tweet'),
+        metapaths = [[('claim', 'is_discussed_by', 'tweet'),
                       ('tweet', 'is_posted_by', 'user'),
                       ('user', 'posted', 'tweet'),
                       ('tweet', 'discusses', 'claim')],  # CTUTC
                      [('claim', 'is_discussed_by', 'tweet'),
                       ('tweet', 'has_hashtag', 'hashtag'),
                       ('hashtag', 'is_hashtag_of', 'tweet'),
-                      ('tweet', 'discusses', 'claim')]  # CTHTC
-        ]
-
+                      ('tweet', 'discusses', 'claim')],  # CTHTC
+                     [('claim', 'is_discussed_by', 'tweet'),
+                      ('tweet', 'is_replied_by', 'reply'),
+                      ('reply', 'reply_to', 'tweet'),
+                      ('tweet', 'discusses', 'claim')],  # CTRTC_r
+                     [('claim', 'is_discussed_by', 'tweet'),
+                      ('tweet', 'is_quoted_by', 'reply'),
+                      ('reply', 'quote_of', 'tweet'),
+                      ('tweet', 'discusses', 'claim')]]  # CTRTC_q
 
     else: #politifact
         metapaths = [
