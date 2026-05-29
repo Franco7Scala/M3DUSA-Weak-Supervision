@@ -1,4 +1,5 @@
 import torch
+
 from torch_geometric.utils import mask_to_index, index_to_mask
 
 
@@ -64,7 +65,6 @@ def masking_unimodal_network(data, target_type, drop_percentage, not_masked = Tr
                 if 'edge_weight' in data[edge_type]: #for meta-paths
                     data[edge_type].edge_weight = data[edge_type].edge_weight[mask]
     return data
-
 
 
 if __name__ == "__main__":

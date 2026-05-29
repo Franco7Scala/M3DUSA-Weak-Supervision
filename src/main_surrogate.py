@@ -3,14 +3,19 @@ import argparse
 import torch
 import pandas as pd
 import time
+import torch.nn as nn
+from torch import optim
+from torch.utils.data import TensorDataset, DataLoader
 
 from torch_geometric.nn import to_hetero
 from src.dataset.dataset_loader import get_target_type, build_heterodata
 from src.mixed_loss.mixed_loss import MixedLoss
 from src.models.gat_surrogate import GATSurrogate
-from src.support.robustness import masking_multimodal
+from src.support.robustness import masking_multimodal, masking_unimodal_network
+from src.surrogate_model.classification_head import RobertaClassificationHead
 from src.training.trainer_surrogate import train_node_classifier, eval_node_classifier
 from src.support.utils import get_device, set_random_seed, print_args, compute_weights
+from src.surrogate_model.trainer import train
 
 
 if __name__ == "__main__":
@@ -26,7 +31,7 @@ if __name__ == "__main__":
     parser.add_argument("--weight-main-component", type=float, default=1.0, help="Weight main component of the loss")
     parser.add_argument("--weight-proxy-component", type=float, default=0.5, help="Weight proxy component of the loss")
     parser.add_argument("--weight-consistency", type=float, default=0.5, help="Weight consistency component of the loss")
-    parser.add_argument("--drop-percentage", type=float, default=0.5, help="Percentage of nodes to drop for robustness evaluation (0-100)")
+    parser.add_argument("--drop-percentage", type=float, default=50, help="Percentage of nodes to drop for robustness evaluation (0-100)")
     args = parser.parse_args()
 
     print_args(args)
@@ -38,20 +43,12 @@ if __name__ == "__main__":
     lr = args.learning_rate
     results_dir = args.results_dir
     embeddings_dir = args.embs_dir
-
     set_random_seed(seed)
-
     device = torch.device(get_device() if torch.cuda.is_available() else "cpu")
 
     # LOAD THE DATASET
     target_type = get_target_type(dataset_name)
     data = build_heterodata(dataset_name, target_type)
-
-    ### DOVE STANNO LE COSE (avrei voluto farti una print) ###
-    # gli embeddings stanno in data.embeddings (Nota: presi da news_all.csv e claim_all.csv cioè {target_type}_all.csv (colonna "embedding_roberta"). Si suppone che il csv sia fratello della cartella heterodata)
-    # la ground truth surrogata sta in data[target_type].y["ground_truth_surrogate"]
-    # la ground truth vera sta in data[target_type].y["ground_truth"]
-
 
     # SET THE MODEL
     model = GATSurrogate(hidden_channels=hidden_channels, dropout=dropout, num_layers=num_layers, out_channels=2) #num layers 3 per mumin, 2 per politifact
@@ -59,6 +56,7 @@ if __name__ == "__main__":
 
     data, model = data.to(device), model.to(device)
     data = masking_multimodal(data, target_type, args.drop_percentage)
+    data = masking_unimodal_network(data, target_type, args.drop_percentage)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=5e-3)
     targets = data[target_type].y
@@ -87,6 +85,6 @@ if __name__ == "__main__":
     #torch.save(model.state_dict(), model_path)
 
     # SAVE THE RESULTS
-    df = pd.DataFrame([{"Seed": seed, "Drop-perc": args.drop_percentage, "Algo": "m3dusa_sl", "F1_micro": f1_micro, "F1_macro": f1_macro, "ROC-AUC": auc, "Prec_0": prec_0, "Rec_0": rec_0, "Prec_1": prec_1, "Rec_1": rec_1, "Time": training_time}])
+    df = pd.DataFrame([{"Seed": seed, "Dataset": dataset_name, "Drop-perc": args.drop_percentage, "Algo": "m3dusa_sl", "F1_micro": f1_micro, "F1_macro": f1_macro, "ROC-AUC": auc, "Prec_0": prec_0, "Rec_0": rec_0, "Prec_1": prec_1, "Rec_1": rec_1, "Time": training_time}])
     results_path = os.path.join(results_dir, f"{dataset_name}_results.csv")
     df.to_csv(results_path, mode="a", header=not os.path.exists(results_path), sep="\t", decimal=",", index=False)

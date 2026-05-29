@@ -11,8 +11,8 @@ weight_main_component=1
 weight_proxy_component=0.3
 weight_consistency=0.2
 
-drop_percentages=(80 70 60 50 40 30 20 10)
-training_seeds=(5 4 3 2 1)
+drop_percentages=(60 50 40 30 20 10 5 2)
+training_seeds=(42 78235 10492 88888 559312)
 
 base_dir="/home/jovyan/projects/InfluentialNodes/datasets/$dataset_name/"
 embeddings_dir="$base_dir/embeddings_sl"
