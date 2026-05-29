@@ -8,25 +8,34 @@ import re
 import scipy
 import numpy as np
 import ast
+import random
+import time
 
 from statistics import stdev
 from torch import nn
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 
-training_seed = [42, 123, 12345, 123123, 2025]
-
 def set_random_seed(seed):
-    numpy.random.seed(seed)
+    os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = True
+    torch.backends.cudnn.benchmark = False
+    torch.use_deterministic_algorithms(True)
 
 
 def get_base_dir():
-    return "/home/martirano/data"
-    #return "/home/jovyan/projects/InfluentialNodes/"
+    #return "/home/martirano/data"
+    return "/home/jovyan/projects/InfluentialNodes/datasets"
+
+
+def get_time_in_millis():
+    return int(round(time.time() * 1000))
 
 
 def get_device():
@@ -269,7 +278,3 @@ if __name__ == "__main__":
     method="SAGE" #"GAT" "HGT" "SAGE"
     fname_out = f"HetSMCG_result_{method}_postprocessed.xlsx"
     processing_HetSMCG_results(dir_competitors, fname_in, fname_out, method)
-
-
-
-

@@ -48,3 +48,27 @@ f1_score(data[target_type].y["ground_truth"].cpu().numpy(),data[target_type].y["
 
 
 
+
+
+
+
+
+def remove_random_edges(data, percentage_to_remove):
+    keep_ratio = 1.0 - (percentage_to_remove / 100.0)
+    for edge_type in data.edge_types:
+        edge_index = data[edge_type].edge_index
+        num_edges = edge_index.size(1)
+        if num_edges == 0:
+            continue
+
+        num_to_keep = int(round(num_edges * keep_ratio))
+        perm = torch.randperm(num_edges)
+        keep_indices = perm[:num_to_keep]
+        data[edge_type].edge_index = edge_index[:, keep_indices]
+        if "edge_attr" in data[edge_type]:
+            data[edge_type].edge_attr = data[edge_type].edge_attr[keep_indices]
+
+        if "edge_label" in data[edge_type]:
+            data[edge_type].edge_label = data[edge_type].edge_label[keep_indices]
+
+    return data
