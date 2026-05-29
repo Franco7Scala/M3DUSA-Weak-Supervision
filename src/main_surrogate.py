@@ -3,23 +3,18 @@ import argparse
 import torch
 import pandas as pd
 import time
-import torch.nn as nn
-from torch import optim
-from torch.utils.data import TensorDataset, DataLoader
 
 from torch_geometric.nn import to_hetero
 from src.dataset.dataset_loader import get_target_type, build_heterodata
 from src.mixed_loss.mixed_loss import MixedLoss
 from src.models.gat_surrogate import GATSurrogate
 from src.support.robustness import masking_multimodal, masking_unimodal_network
-from src.surrogate_model.classification_head import RobertaClassificationHead
 from src.training.trainer_surrogate import train_node_classifier, eval_node_classifier
 from src.support.utils import get_device, set_random_seed, print_args, compute_weights
-from src.surrogate_model.trainer import train
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run M3DUSA_active experiment")
+    parser = argparse.ArgumentParser(description="Run M3DUSA surrogate loss experiment")
     parser.add_argument("--dataset-name", type=str, default="politifact", help="Name of the dataset (e.g., politifact)")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for training")
     parser.add_argument("--num-layers", type=int, default=2, help="Number of GAT layers")
@@ -85,6 +80,6 @@ if __name__ == "__main__":
     #torch.save(model.state_dict(), model_path)
 
     # SAVE THE RESULTS
-    df = pd.DataFrame([{"Seed": seed, "Dataset": dataset_name, "Drop-perc": args.drop_percentage, "Algo": "m3dusa_sl", "F1_micro": f1_micro, "F1_macro": f1_macro, "ROC-AUC": auc, "Prec_0": prec_0, "Rec_0": rec_0, "Prec_1": prec_1, "Rec_1": rec_1, "Time": training_time}])
+    df = pd.DataFrame([{"Seed": seed, "Dataset": dataset_name, "Drop-perc": args.drop_percentage, "Algo": f"m3dusa_sl_m{weight_main_component}_s{weight_proxy_component}_c{weight_consistency}", "F1_micro": f1_micro, "F1_macro": f1_macro, "ROC-AUC": auc, "Prec_0": prec_0, "Rec_0": rec_0, "Prec_1": prec_1, "Rec_1": rec_1, "Time": training_time}])
     results_path = os.path.join(results_dir, f"{dataset_name}_results.csv")
     df.to_csv(results_path, mode="a", header=not os.path.exists(results_path), sep="\t", decimal=",", index=False)
