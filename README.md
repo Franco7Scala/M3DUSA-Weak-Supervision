@@ -38,4 +38,15 @@ To run the code, ensure you have the libraries specified in `requirements.txt` i
 ## Citation
 
 ```bibtex
-Coming soon...
+@article{MARTIRANO2026103014,
+ title = {Toward robust multimodal fake news detection under weak supervision via text-derived surrogate labels},
+ journal = {Journal of Computational Science},
+ volume = {101},
+ pages = {103014},
+ year = {2026},
+ issn = {1877-7503},
+ doi = {https://doi.org/10.1016/j.jocs.2026.103014},
+ url = {https://www.sciencedirect.com/science/article/pii/S1877750326002322},
+ author = {Liliana Martirano and Francesco Scala and Carmela Comito and Luigi Pontieri},
+ keywords = {Multimodal fake news detection, Weak supervision, Surrogate labels, Consistency learning, Heterogeneous graph neural networks}
+}
