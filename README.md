@@ -1,5 +1,6 @@
 # Toward Robust Multimodal Fake News Detection under Weak Supervision via Text-Derived Surrogate Labels
 
+[![Paper](https://img.shields.io/badge/Paper-Journal_of_Computational_Science-brightgreen.svg)](https://doi.org/10.1016/j.jocs.2026.103014)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 This repository contains the code and resources for the **M3DUSA-WS** framework presented in the research paper "Toward Robust Multimodal Fake News Detection under Weak Supervision via Text-Derived Surrogate Labels". Our proposal addresses the challenge of multimodal fake news detection in scenarios with limited ground-truth annotations by combining heterogeneous graph learning with text-derived surrogate labels and a consistency-regularized training strategy.
